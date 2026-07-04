@@ -16,6 +16,7 @@ pom.xml.asc
 .lein-*
 .nrepl-*
 .DS_Store
+.calva
 .clj-kondo
 .portal
 .lsp
