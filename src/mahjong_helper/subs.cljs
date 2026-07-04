@@ -1,5 +1,5 @@
 (ns mahjong-helper.subs
-  (:require [mahjong-helper.utils :refer [suitless?]]
+  (:require [mahjong-helper.utils :refer [suitless? tile-complete?]]
             [re-re-frame.core :refer [reg-grab grab]]))
 
 (reg-grab
@@ -12,9 +12,7 @@
  (fn [db]
    (->> (grab db ::hand)
         vals
-        (filter #(and (:value %)
-                      (or (suitless? (:value %))
-                          (:suit %))))
+        (filter tile-complete?)
         count)))
 
 (reg-grab

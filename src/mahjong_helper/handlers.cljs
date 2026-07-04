@@ -1,7 +1,7 @@
 (ns mahjong-helper.handlers
   (:require [mahjong-helper.subs :as subs]
             [re-re-frame.core :refer [reg-event-x grab]]
-            [mahjong-helper.utils :refer [suitless?]]))
+            [mahjong-helper.utils :refer [tile-complete?]]))
 
 (defn initial-db []
   {:hand (zipmap (range 13)
@@ -12,30 +12,55 @@
  (fn []
    {:db (initial-db)}))
 
+;; KEY TYPE RULES
+;; ================
+;; - if tile is "complete", clear it first
+;; - assoc value/suit
+;; - if tile is now "complete", advance to next tile (or stop editing if idx = 12)
+
 (reg-event-x
  ::key-value
  (fn [db value]
    (let [idx (grab db ::subs/editing-idx)
-         {:keys [suit]} (grab db ::subs/editing)
-         complete? (suitless? value)]
-     (cond-> (-> db
-                 (assoc-in [:hand idx :value] value)
-                 (update-in [:hand idx] dissoc :suit))
-       ;; flowers and winds have no suit OR suit already chosen - tile is complete, move to next tile
-       (and complete? (= idx 12)) (assoc :editing -1)
-       (and complete? (not= idx 12)) (update :editing inc)))))
+         editing (grab db ::subs/editing)]
+     {:db (cond-> db
+            (tile-complete? editing) (assoc-in [:hand idx] {})
+            :always (assoc-in [:hand idx :value] value))
+      :dispatch [::advance-editing-idx-if-current-editing-tile-complete]})))
 
 (reg-event-x
  ::key-suit
  (fn [db suit]
    (let [idx (grab db ::subs/editing-idx)
-         {:keys [value]} (grab db ::subs/editing)
-         complete? (and value (not (suitless? value)))]
-     (if complete?
-       (cond-> (assoc-in db [:hand idx :suit] suit)
-         (= idx 12) (assoc :editing -1)
-         (not= idx 12) (update :editing inc))
-        db))))
+         editing (grab db ::subs/editing)]
+     {:db (cond-> db
+            (tile-complete? editing) (assoc-in [:hand idx] {})
+            :always (assoc-in [:hand idx :suit] suit))
+      :dispatch [::advance-editing-idx-if-current-editing-tile-complete]})))
+
+
+(reg-event-x
+ ::advance-editing-idx-if-current-editing-tile-complete
+ (fn [db] 
+   (when (tile-complete? (grab db ::subs/editing))
+     (let [idx (grab db ::subs/editing-idx)
+           needed-idxs (->> (grab db ::subs/hand)
+                            (filter (fn [[key tile]]
+                                      (not (tile-complete? tile))))
+                            (map first)
+                            sort)]
+       (cond
+         ;; all done
+         (empty? needed-idxs)
+         (assoc db :editing -1)
+         ;; next needed is after this one
+         (some #(> % idx) needed-idxs)
+         (assoc db :editing (->> needed-idxs
+                                 (filter #(> % idx))
+                                 first))
+         ;; next needed is before this one
+         :else
+         (assoc db :editing (first needed-idxs)))))))
 
 (reg-event-x
  ::backspace

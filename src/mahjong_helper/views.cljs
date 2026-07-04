@@ -374,7 +374,8 @@
   (let [{:keys [value suit]} tile
         needs-suit? (not (suitless? value))
         editing? (= idx @(subscribe [::subs/editing-idx]))]
-    [:button.tile.hand-tile {:on-click #(dispatch [::handlers/edit-tile idx]) 
+    [:button.tile.hand-tile {:on-click #(do (dispatch [::handlers/edit-tile idx])
+                                            (js/window.scrollTo #js{:top 0 :behavior "smooth"}))
                              :class [(when (and (not editing?) 
                                                (or (not value) 
                                                    (and needs-suit? (not suit)))) 
@@ -403,7 +404,7 @@
 
 (defn hand-view []
   (let [hand @(subscribe [::subs/hand])]
-    [:div
+    [:div#hand-view
      [:div {:style {:display "flex"
                     :justify-content "space-between"
                     :align-items "baseline"
@@ -421,26 +422,41 @@
            ^{:key idx} [hand-tile idx tile])))]]))
 
 (defn keyboard []
-  [:div {:style {:display "grid"
-                 :grid-template-columns "repeat(4, 1fr)"
-                 :gap "6px"}}
-   (doall
-    (for [item tile-keys]
-      (let [{:keys [key icon on-click suit? style]} (if (string? item)
-                                                      {:key item}
-                                                      item)]
-        [:button.tile {:key key
-                       :on-click (or on-click #(dispatch [(if suit? ::handlers/key-suit ::handlers/key-value) key]))
-                       :style (if suit?
-                                {:background (get-in suits [key :color])}
-                                style)}
-         (cond 
-           (fn? icon)
-           [icon]
-           icon
-           [:img {:src (str "/img/" icon ".svg")}]
-           :else
-           key)])))])
+  (let [editing-idx @(subscribe [::subs/editing-idx])]
+    [:div {:style {:display "grid"
+                   :grid-template-columns "repeat(4, 1fr)"
+                   :gap "6px"}}
+     (doall
+      (for [item tile-keys]
+        (let [{:keys [key icon on-click suit? style]} (if (string? item)
+                                                        {:key item}
+                                                        item)]
+          [:button.tile {:key key
+                         :on-click (or on-click #(dispatch [(if suit? ::handlers/key-suit ::handlers/key-value) key]))
+                         :style (if suit?
+                                  {:background (get-in suits [key :color])}
+                                  style)}
+           (cond 
+             (fn? icon)
+             [icon]
+             icon
+             [:img {:src (str "/img/" icon ".svg")}]
+             :else
+             key)])))
+     [:button.tile.tile-sm {:on-click #(dispatch [::handlers/edit-tile (if (= editing-idx 0)
+                                                                         12
+                                                                         (dec editing-idx))])
+                            :style {:background "black"
+                                    :color "white"
+                                    :grid-column "1 / 3"}}
+      [:span.material-symbols-outlined "chevron_backward"]]
+     [:button.tile.tile-sm {:on-click #(dispatch [::handlers/edit-tile (if (= editing-idx 12)
+                                                                         0
+                                                                         (inc editing-idx))])
+                            :style {:background "black"
+                                    :color "white"
+                                    :grid-column "3 / 5"}}
+      [:span.material-symbols-outlined "chevron_forward"]]]))
 
 (defn display-group
   [s]
@@ -497,20 +513,24 @@
 (defn results-view []
   (let [hand @(subscribe [::subs/hand])]
     (when (>= @(subscribe [::subs/num-completed-tiles]) 13)
-      [:div {:style {:margin-top "16px"}}
-       [:div {:style {:margin-bottom "6px"}} "Closest mahjongs"]
-       (for [[pattern ranking] (->> (rank-patterns-memo (->> hand
-                                                             vals
-                                                             (map #(str (:value %) (get % :suit ".")))))
-                                    (sort-by val >))]
-         ^{:key pattern}
-         [:div.pattern {:style {:display "flex"
-                                :align-items "center"
-                                :gap "10px"
-                                :padding "6px 0"
-                                :border-bottom "1px solid #eee"}}
-          [:span.ranking (/ (js/Math.floor (* (/ ranking 14) 1000)) 10) "%"]
-          [display-pattern pattern]])])))
+      [:<>
+       [:hr {:style {:margin-top "20px"
+                     :margin-left "-20px"
+                     :margin-right "-20px"}}]
+       [:div {:style {:margin-top "16px"}} 
+        [:div {:style {:margin-bottom "6px"}} "Closest Mahjongs"]
+        (for [[pattern ranking] (->> (rank-patterns-memo (->> hand
+                                                              vals
+                                                              (map #(str (:value %) (get % :suit ".")))))
+                                     (sort-by val >))]
+          ^{:key pattern}
+          [:div.pattern {:style {:display "flex"
+                                 :align-items "center"
+                                 :gap "10px"
+                                 :padding "6px 0"
+                                 :border-bottom "1px solid #eee"}}
+           [:span.ranking (/ (js/Math.floor (* (/ ranking 14) 1000)) 10) "%"]
+           [display-pattern pattern]])]])))
 
 (defn Main []
   [:<>
