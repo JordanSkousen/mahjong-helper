@@ -1,3 +1,3 @@
 # mahjong-helper 
 
-[mahjong.jothedev.com](mahjong.jothedev.com)
+[mahjong.jothedev.com](https://mahjong.jothedev.com)
