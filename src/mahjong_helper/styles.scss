@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+
+body {
+  font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.title {
+  border-bottom: 1px solid black;
+  font-size: 1.5em;
+  font-weight: 900;
+  position: fixed;
+  backdrop-filter: blur(10px);
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  a {
+    float: right;
+    color: rgb(0, 166, 255);
+  }
+  z-index: 2;
+}
+
+.keyboard {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(10px);
+  border-top: 1px solid #ddd;
+}
+
+.tile {
+  font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: 36px;
+  padding: 6px 0;
+  background: white;
+  border: none;
+  border-radius: 10px;
+  color: #222;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  box-shadow: 2px 2px 3px rgba(0,0,0,0.4);
+  img, svg {
+    height: 48px;
+  }
+}
+.hand-tile {
+  width: 44px;
+  height: 58px;
+  padding: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  svg {
+    display: inline;
+    width: 16px;
+  }
+}
+.pending-tile {
+  width: 44px;
+  height: 58px;
+  border: 2px dashed #999;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.editing-tile {
+  background: #fff2cf;
+  animation-name: editing-blink;
+  animation-duration: 1.5s;
+  animation-iteration-count: infinite;
+  border: 2px solid #fff2cf;
+}
+.pattern {
+  font-size: 1.6em;
+}
+.ranking {
+  font-size: 0.5em;
+  min-width: 3em;
+  font-weight: 100;
+  color: gray;
+}
+.group {
+  img, svg {
+    height: 0.9em;
+    transform: translateY(2px);
+  }
+}
+.group img.white-dragon {
+  height: 0.9em;
+  transform: translateY(2px);
+}
+.closed {
+  width: 1.5em;
+  transform: translateY(-5px);
+}
+@keyframes editing-blink {
+  0% {
+    background: #fff2cf;
+  }
+  49% {
+    background: #fff2cf;
+  }
+  50% {
+    background: rgb(248, 245, 235);
+  }
+  100% {
+    background: rgb(248, 245, 235);
+  }
+}

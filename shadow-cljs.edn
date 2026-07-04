@@ -1,0 +1,20 @@
+{:deps     {:aliases [:dev]}
+ :autobuild true
+ :nrepl    {:port 3333}
+ :dev-http {3000 ["public"]}
+ :builds   {:browser {:target           :browser
+                      :modules          {:mahjong-helper {:entries [mahjong-helper.core]
+                                                               :init-fn mahjong-helper.core/init}}
+                      :output-dir       "public/js"
+                      :asset-path       "/js"
+                      :compiler-options {:closure-warnings {:global-this :off}}
+                      :devtools         {:repl-init-ns mahjong-helper.core
+                                         :preloads     [re-frisk.preload]}
+                      :dev              {:compiler-options {:output-feature-set :es-next
+                                                            :closure-defines {re-frame.trace.trace-enabled?        true
+                                                                              day8.re-frame.tracing.trace-enabled? true}}}
+                      :release          {:output-dir    "public/js"
+                                         :js-options    {:minimize-require true}
+                                         :build-options {:ns-aliases {day8.re-frame.tracing day8.re-frame.tracing-stubs}}
+                                         :compiler-options {:closure-defines {re-frame.trace.trace-enabled?        false
+                                                                              day8.re-frame.tracing/trace-enabled? false}}}}}}

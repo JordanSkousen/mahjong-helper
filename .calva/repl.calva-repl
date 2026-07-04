@@ -1,0 +1,746 @@
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉shadow.user꞉> 
+(let [mahjong (nth mahjongs 1)
+      paren-groups (string/split mahjong #"\(|\)")]
+  paren-groups)
+; Syntax error compiling at (src/mahjong_helper/views.cljs:65:15).
+; Unable to resolve symbol: mahjongs in this context
+clj꞉mahjong-helper.views꞉> 
+(def mahjongs ["32a30.42b46b"
+               "(12a10.12a16a)3Da42b3Db"
+               "(12a10.12a16a)3Da46b3Db"
+               "3F.(12a10.12a16a)32b46c"
+               "22a20.32b36b(1N.1E.1W.1S.)"
+               "32a34a46a48a"
+               "32a34a46b48b"
+               "2F.42a24b26b48a"
+               "2E.22a34a36a28a2W."
+               "42a3Da48b3Db"
+               "3F.22a24a36a48a"
+               "(12a14a16a18a)4eb1Db4ec1Dc"
+               "3F.(12a14a16a18a)3F.4eb"
+               "2F.(12a14a16a)38a(12b14b16b)38b"
+               "4va6F.4vb"
+               "4va1Da3vb1Db4vc1Dc"
+               "2F.4va2vb4vc2Da"
+               "2F.4va2vb4vc2Db"
+               "2F.4va2vb4vc2Dc"
+               "5va4vb5vc"
+               "2F.5va2wa5xa"
+               "5va5Va4Db"
+               "21a32a23a34a45a"
+               "25a36a27a38a49a"
+               "3F.4va(1wa1xa1ya)4za"
+               "3F.4va(1wb1xb1yb)4za"
+               "2va2wa3vb3wb4xc"
+               "3va3wa4xa4ya"
+               "3va3wa4xb4yb"
+               "3F.2va2wa3xa4Da"
+               "3F.2va2wb3xa4Db"
+               "4va6F.4wa"
+               "2F.4va4wa4xa"
+               "2F.4va4wb4xc"
+               "1va2wa3xa1vb2wb3xb2yc"
+               "21a33a25a37a49a"
+               "21a33a25b37b49c"
+               "31a33a43b45b"
+               "35a37a47b49b"
+               "2N.41a23a45a2S."
+               "2N.45a27a49a2S."
+               "2oa(13a15a17a19a)4ob4oc"
+               "3F.21a23a35a4Da"
+               "3F.25a27a39a4Da"
+               "21a23a31b33b45c"
+               "25a27a35b37b49c"
+               "41a23a25a27a49a"
+               "41a13b25b27b49a"
+               "2F.21a23a25a31b31c"
+               "2F.25a27a29a35b35c"
+               "2F.(11a13a15a)37a39a3Db"
+               "4N.3E.3W.4S."
+               "3N.4E.4W.3S."])
+clj꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      paren-groups (string/split mahjong #"\(|\)")]
+  paren-groups)
+clj꞉mahjong-helper.views꞉> 
+(defn display-group
+  [s]
+  (let [[mul val suit] s]
+    [:span {:style {:color (case suit
+                             "b" "green"
+                             "c" "red"
+                             "black")}}
+     (repeat mul (case val
+                   "v" "1"
+                   "w" "2"
+                   "x" "3"
+                   "y" "4"
+                   "z" "5"
+                   "o" "1"
+                   "e" "2"
+                   val))]))
+clj꞉mahjong-helper.views꞉> 
+(display-group "32a")
+; Execution error (ClassCastException) at mahjong-helper.views/display-group (REPL:73).
+; class java.lang.Character cannot be cast to class java.lang.Number (java.lang.Character and java.lang.Number are in module java.base of loader 'bootstrap')
+clj꞉mahjong-helper.views꞉> 
+(defn display-group
+  [s]
+  (let [[mul val suit] s]
+    [:span {:style {:color (case suit
+                             "b" "green"
+                             "c" "red"
+                             "black")}}
+     (repeat (js/Number.parseInt mul) (case val
+                                        "v" "1"
+                                        "w" "2"
+                                        "x" "3"
+                                        "y" "4"
+                                        "z" "5"
+                                        "o" "1"
+                                        "e" "2"
+                                        val))]))
+; Syntax error compiling at (src/mahjong_helper/views.cljs:73:14).
+; No such namespace: js
+clj꞉mahjong-helper.views꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉shadow.user꞉> 
+; TIPS: You can choose which REPL to use (clj or cljs):
+;    *Calva: REPL Sessions*
+;    (Click the session indicator in the status bar to open it)
+(require '[cljs.repl :refer [apropos dir doc find-doc print-doc pst source]])
+cljs꞉user꞉> 
+(defn display-group
+  [s]
+  (let [[mul val suit] s]
+    [:span {:style {:color (case suit
+                             "b" "green"
+                             "c" "red"
+                             "black")}}
+     (repeat (js/Number.parseInt mul) (case val
+                                        "v" "1"
+                                        "w" "2"
+                                        "x" "3"
+                                        "y" "4"
+                                        "z" "5"
+                                        "o" "1"
+                                        "e" "2"
+                                        val))]))
+cljs꞉mahjong-helper.views꞉> 
+(display-group "32a")
+cljs꞉mahjong-helper.views꞉> 
+(display-group "32o")
+cljs꞉mahjong-helper.views꞉> 
+(display-group "3ob")
+cljs꞉mahjong-helper.views꞉> 
+(display-group "3oc")
+cljs꞉mahjong-helper.views꞉> 
+(display-group "3oa")
+cljs꞉mahjong-helper.views꞉> 
+(display-group "3o.")
+cljs꞉mahjong-helper.views꞉> 
+(partition 3 "abcdefghi")
+cljs꞉mahjong-helper.views꞉> 
+(mapv vec (partition 3 "abcdefghi"))
+cljs꞉mahjong-helper.views꞉> 
+(map str (partition 3 "abcdefghi"))
+cljs꞉mahjong-helper.views꞉> 
+(map (partial apply str) (partition 3 "abcdefghi"))
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split
+       (map-indexed (fn [idx s]
+                      (if (odd? idx)
+                        [display-group s]
+                        (->> s
+                             (partition 3)
+                             (map (partial apply str))
+                             (map (fn [group]
+                                    [:span [display-group group] " "]))))))))
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split
+       (map-indexed (fn [idx s]
+                      (if (odd? idx)
+                        (display-group s)
+                        (->> s
+                             (partition 3)
+                             (map (partial apply str))
+                             (map (fn [group]
+                                    [:span (display-group group) " "]))))))))
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split 
+       (map-indexed (fn [idx s]
+                      (when-not (string/blank? s)
+                        (if (odd? idx)
+                          (display-group s)
+                          (->> s
+                               (partition 3)
+                               (map (partial apply str))
+                               (map (fn [group]
+                                      [:span (display-group group) " "])))))))))
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split 
+       (map-indexed (fn [idx s]
+                      (when-not (string/blank? s)
+                        (if (odd? idx)
+                          (display-group s)
+                          (->> s
+                               (partition 3)
+                               (map (partial apply str))
+                               (map (fn [group]
+                                      [:span (display-group group) " "])))))))))
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split 
+       (map-indexed (fn [idx s]
+                      (when-not (string/blank? s)
+                        (if (odd? idx)
+                          (display-group s)
+                          (->> s
+                               (partition 3)
+                               (map (partial apply str))
+                               (map (fn [group]
+                                      [:span (display-group group) " "]))))))))
+  split)
+cljs꞉mahjong-helper.views꞉> 
+(let [mahjong (nth mahjongs 1)
+      split (string/split mahjong #"\(|\)")]
+  (->> split 
+       (map-indexed (fn [idx s]
+                      (when-not (string/blank? s)
+                        (->> s
+                             (partition 3)
+                             (map (partial apply str))
+                             (map (fn [group]
+                                    [:span (display-group group) (when (even? idx) " ")]))))))))
+cljs꞉mahjong-helper.views꞉> 
+(concat (repeat 4 (->> (range 1 10)
+                       (map #(str % "B")))))
+cljs꞉mahjong-helper.views꞉> 
+(concat (->> (range 1 10)
+             (map #(str % "B"))
+             (repeat 4)
+             flatten)
+        (->> (range 1 10)
+             (map #(str % "C"))
+             (repeat 4)
+             flatten)
+        (->> (range 1 10)
+             (map #(str % "D"))
+             (repeat 4)
+             flatten)
+        (repeat 4 "DB")
+        (repeat 4 "DC")
+        (repeat 4 "DD")
+        (repeat 4 "N")
+        (repeat 4 "E")
+        (repeat 4 "W")
+        (repeat 4 "S")
+        (repeat 8 "J")
+        (repeat 8 "F"))
+cljs꞉mahjong-helper.views꞉> 
+(-> (concat (->> (range 1 10)
+                  (map #(str % "B"))
+                  (repeat 4)
+                  flatten)
+             (->> (range 1 10)
+                  (map #(str % "C"))
+                  (repeat 4)
+                  flatten)
+             (->> (range 1 10)
+                  (map #(str % "D"))
+                  (repeat 4)
+                  flatten)
+             (repeat 4 "DB")
+             (repeat 4 "DC")
+             (repeat 4 "DD")
+             (repeat 4 "N")
+             (repeat 4 "E")
+             (repeat 4 "W")
+             (repeat 4 "S")
+             (repeat 8 "J")
+             (repeat 8 "F"))
+     shuffle
+     (take 13))
+cljs꞉mahjong-helper.views꞉> 
+(->> (concat (->> (range 1 10)
+                  (map #(str % "B"))
+                  (repeat 4)
+                  flatten)
+             (->> (range 1 10)
+                  (map #(str % "C"))
+                  (repeat 4)
+                  flatten)
+             (->> (range 1 10)
+                  (map #(str % "D"))
+                  (repeat 4)
+                  flatten)
+             (repeat 4 "DB")
+             (repeat 4 "DC")
+             (repeat 4 "DD")
+             (repeat 4 "N")
+             (repeat 4 "E")
+             (repeat 4 "W")
+             (repeat 4 "S")
+             (repeat 8 "J")
+             (repeat 8 "F"))
+     shuffle
+     (take 13))
+cljs꞉mahjong-helper.views꞉> 
+(->> all-tiles
+     shuffle
+     (take 13))
+cljs꞉mahjong-helper.views꞉> 
+(vec "rstuvwxyz")
+cljs꞉mahjong-helper.views꞉> 
+(seq "rstuvwxyz")
+cljs꞉mahjong-helper.views꞉> 
+(defn number?*
+  [s]
+  (not (js/Number.isNaN (js/Number.parseInt s))))
+cljs꞉mahjong-helper.views꞉> 
+(number?* "1")
+cljs꞉mahjong-helper.views꞉> 
+(number?* "a")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern nil "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern nil "31b" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"1" "C"} "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "C"} "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "C"} "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "31a" "2B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "31a" "1B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "31a" "2B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "3ra" "2B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "3ra" "3C")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"a" "B"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"r" "3"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"r" "3"} "3ra" "4B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"r" "3"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(.indexOf "r" (seq "rstuvwxyz"))
+cljs꞉mahjong-helper.views꞉> 
+(.indexOf "r" "rstuvwxyz")
+cljs꞉mahjong-helper.views꞉> 
+(string/index-of "r" "rstuvwxyz")
+cljs꞉mahjong-helper.views꞉> 
+(string/index-of "rstuvwxyz" "r")
+cljs꞉mahjong-helper.views꞉> 
+(string/index-of "rstuvwxyz" "s")
+cljs꞉mahjong-helper.views꞉> 
+(defn pv-wild-map
+  ([pattern-val tile-val]
+   (pv-wild-map pattern-val tile-val false))
+  ([pattern-val tile-val _2?]
+   (let [arr (if _2? "ijklmnopq" "rstuvwxyz") 
+         p-idx (string/index-of arr pattern-val)
+         tile-val' (js/Number.parseInt tile-val)
+         start (- tile-val' p-idx)]
+     (zipmap arr 
+             (range start (+ start (count arr) 1))))))
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "t" "8")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "t" "8")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "t" "8")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "t" "9")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "u" "9")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "r" "1")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "i" "1" true)
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"r" "3"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(defn matches-pattern
+  [context pattern tile]
+  (let [[pattern-mul pattern-val pattern-suit] pattern
+        [tile-val tile-suit] tile
+        val-match (cond
+                    ;; tile is joker
+                    (and (= tile-val "J")
+                         (> (js/Number.parseInt pattern-mul) 2))
+                    {:result true}
+                    ;; tile is number, pattern is r-z val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num? pattern-val)
+                         (nil? (get context pattern-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pattern-val tile-val))}
+                    ;; tile is number, pattern is r-z val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num? pattern-val)
+                         (= (get context pattern-val) tile-val))
+                    {:result true}
+                    ;; tile is number, pattern is i-q val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pattern-val)
+                         (nil? (get context pattern-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pattern-val tile-val true))}
+                    ;; tile is number, pattern is i-q val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pattern-val)
+                         (= (get context pattern-val) tile-val))
+                    {:result true}
+                    ;; tile is specific number
+                    (= tile-val pattern-val)
+                    {:result true})
+        suit-match (cond
+                     ;; suit not applicable
+                     (and (= pattern-suit ".")
+                          (= tile-suit "."))
+                     {:result true}
+                     ;; suit not picked in context yet 
+                     (nil? (get context pattern-suit))
+                     {:result true
+                      :context (assoc context pattern-suit tile-suit)}
+                     ;; suit picked in context matches
+                     (= (get context pattern-suit) tile-suit)
+                     {:result true})]
+    {:result (boolean (and (:result val-match) (:result suit-match)))
+     :context (merge context
+                     (:context val-match)
+                     (:context suit-match))}))
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern {"r" "3"} "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern nil "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(select-keys {"a" "b" "c" "d" 12 23} "ac")
+cljs꞉mahjong-helper.views꞉> 
+(select-keys {"a" "b" "c" "d" 12 23} "a")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group nil "3ra" "3B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group nil "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(int "2")
+cljs꞉mahjong-helper.views꞉> 
+(defn pv-wild-map
+  ([pgroup-val tile-val]
+   (pv-wild-map pgroup-val tile-val false))
+  ([pgroup-val tile-val _2?]
+   (let [arr (if _2? WILDS2 WILDS1) 
+         p-idx (string/index-of arr pgroup-val)
+         tile-val' (int tile-val)
+         start (- tile-val' p-idx)]
+     (zipmap arr
+             (map str (range start (+ start (count arr) 1)))))))
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "t" "6")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(defn matches-pattern-group
+  [context pattern-group tile]
+  (let [{:keys [pattern]} context
+        [pgroup-mul pgroup-val pgroup-suit] pattern-group
+        [tile-val tile-suit] tile
+        val-match (cond
+                    ;; tile is joker
+                    (and (joker? tile-val)
+                         (> (int pgroup-mul) 2))
+                    {:result true}
+                    ;; tile is number, pattern is r-z val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val))}
+                    ;; tile is number, pattern is r-z val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is number, pattern is i-q val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val true))}
+                    ;; tile is number, pattern is i-q val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is specific number
+                    (= tile-val pgroup-val) 
+                    {:result true})
+        val-match' (update val-match :result (fn [result]
+                                               (cond 
+                                                 ;; generated wild map has negative val, invalid result
+                                                 (some #(<= (int %) 0) (vals (select-keys (:context result) ALL_WILDS)))
+                                                 false
+                                                 ;; generated wild map has a val > 9 that will be used in pattern, invalid result
+                                                 (some #(and (> (int (get-in result [:context %])) 9)
+                                                             (string/includes? pattern %)) ALL_WILDS)
+                                                 false
+
+                                                 :else
+                                                 result)))
+        suit-match (cond
+                     ;; suit not applicable
+                     (and (= pgroup-suit ".")
+                          (= tile-suit "."))
+                     {:result true}
+                     ;; suit not picked in context yet 
+                     (nil? (get context pgroup-suit))
+                     {:result true
+                      :context (assoc context pgroup-suit tile-suit)}
+                     ;; suit picked in context matches
+                     (= (get context pgroup-suit) tile-suit)
+                     {:result true})]
+    {:result (boolean (and (:result val-match') (:result suit-match)))
+     :context (merge context
+                     (:context val-match')
+                     (:context suit-match))}))
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "r" "8")
+cljs꞉mahjong-helper.views꞉> 
+(let [pattern "5ta"
+        result {:context (pv-wild-map "r" "8")}]
+    (some #(and (> (int (get-in result [:context %])) 9)
+                (string/includes? pattern %)) ALL_WILDS))
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(defn matches-pattern-group
+  [context pattern-group tile]
+  (let [{:keys [pattern]} context
+        [pgroup-mul pgroup-val pgroup-suit] pattern-group
+        [tile-val tile-suit] tile
+        val-match (cond
+                    ;; tile is joker
+                    (and (joker? tile-val)
+                         (> (int pgroup-mul) 2))
+                    {:result true}
+                    ;; tile is number, pattern is r-z val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val))}
+                    ;; tile is number, pattern is r-z val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is number, pattern is i-q val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val true))}
+                    ;; tile is number, pattern is i-q val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is specific number
+                    (= tile-val pgroup-val) 
+                    {:result true})
+        val-match' (update val-match :result (fn [result]
+                                               (cond 
+                                                 ;; generated wild map has negative val, invalid result
+                                                 (some #(<= (int %) 0) (vals (select-keys (:context val-match) ALL_WILDS)))
+                                                 false
+                                                 ;; generated wild map has a val > 9 that will be used in pattern, invalid result
+                                                 (some #(and (> (int (get-in val-match [:context %])) 9)
+                                                             (string/includes? pattern %)) ALL_WILDS)
+                                                 false
+
+                                                 :else
+                                                 result)))
+        suit-match (cond
+                     ;; suit not applicable
+                     (and (= pgroup-suit ".")
+                          (= tile-suit "."))
+                     {:result true}
+                     ;; suit not picked in context yet 
+                     (nil? (get context pgroup-suit))
+                     {:result true
+                      :context (assoc context pgroup-suit tile-suit)}
+                     ;; suit picked in context matches
+                     (= (get context pgroup-suit) tile-suit)
+                     {:result true})] 
+    {:result (boolean (and (:result val-match') (:result suit-match)))
+     :context (merge context
+                     (:context val-match')
+                     (:context suit-match))}))
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(defn matches-pattern-group
+  [context pattern-group tile]
+  (let [{:keys [pattern]} context
+        [pgroup-mul pgroup-val pgroup-suit] pattern-group
+        [tile-val tile-suit] tile
+        val-match (cond
+                    ;; tile is joker
+                    (and (joker? tile-val)
+                         (> (int pgroup-mul) 2))
+                    {:result true}
+                    ;; tile is number, pattern is r-z val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val))}
+                    ;; tile is number, pattern is r-z val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is number, pattern is i-q val, and none picked in context yet
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (nil? (get context pgroup-val)))
+                    {:result true
+                     :context (merge context (pv-wild-map pgroup-val tile-val true))}
+                    ;; tile is number, pattern is i-q val, and matches one picked in context
+                    (and (number?* tile-val)
+                         (pv-wild-num2? pgroup-val)
+                         (= (get context pgroup-val) tile-val))
+                    {:result true}
+                    ;; tile is specific number
+                    (= tile-val pgroup-val) 
+                    {:result true})
+        val-match' (update val-match :result (fn [result]
+                                               (cond 
+                                                 ;; generated wild map has negative val, invalid result
+                                                 (some #(<= (int %) 0) (vals (select-keys (:context val-match) ALL_WILDS)))
+                                                 false
+                                                 ;; generated wild map has a val > 9 that will be used in pattern, invalid result
+                                                 (some #(and (> (int (get-in val-match [:context %])) 9)
+                                                             (string/includes? pattern %)) ALL_WILDS)
+                                                 false
+
+                                                 :else
+                                                 result)))
+        suit-match (cond
+                     ;; suit not applicable
+                     (and (= pgroup-suit ".")
+                          (= tile-suit "."))
+                     {:result true}
+                     ;; suit not picked in context yet 
+                     (nil? (get context pgroup-suit))
+                     {:result true
+                      :context (assoc context pgroup-suit tile-suit)}
+                     ;; suit picked in context matches
+                     (= (get context pgroup-suit) tile-suit)
+                     {:result true})
+        result (boolean (and (:result val-match') (:result suit-match)))] 
+    {:result result
+     :context (cond-> context
+                result (merge (:context val-match') (:context suit-match)))}))
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5sa"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ra"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "7B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "8B")
+cljs꞉mahjong-helper.views꞉> 
+(matches-pattern-group {:pattern "5ta"} "3ra" "7B")
+cljs꞉mahjong-helper.views꞉> 
+(pv-wild-map "r" "8")
+cljs꞉mahjong-helper.views꞉> 
+(when-let [requires (resolve 'clojure.main/repl-requires)] (clojure.core/apply clojure.core/require @requires))
+clj꞉shadow.user꞉> 
+; TIPS: You can choose which REPL to use (clj or cljs):
+;    *Calva: REPL Sessions*
+;    (Click the session indicator in the status bar to open it)
+(require '[cljs.repl :refer [apropos dir doc find-doc print-doc pst source]])
+cljs꞉user꞉> 
+@(subscribe [::subs/hand])
+cljs꞉mahjong-helper.views꞉> 
+(->> @(subscribe [::subs/hand])
+                   (filter #(and (:value %)
+                                 (or (suitless? (:value %))
+                                     (:suit %))))
+                   count)
+cljs꞉mahjong-helper.views꞉> 
+(defn display-group
+  [s]
+  (let [[mul val suit] s
+        color (case suit
+                "a" "#d18e29"
+                "b" "#6fc7b3"
+                "c" "#6a52a2"
+                "black")]
+    [:span.group {:style {:color color}}
+     (repeat (int mul)
+             (cond
+               ;; suitless icon
+               (some #{val} ["F" "N" "E" "W" "S"])
+               [:img {:src (str "/img/" val ".svg")
+                      :alt val}]
+               
+               ;; suited icon (dragon)
+               (= val "D")
+               [(->> tile-keys
+                     (filter #(= (:key %) "Dragon"))
+                     first
+                     :icon) {:fill color}]
+
+               ;; sequential letter
+               (string/includes? WILDS1 val)
+               (.charCodeAt "r")))]))
+cljs꞉mahjong-helper.views꞉> 
+(.charCodeAt "r" 0)
+cljs꞉mahjong-helper.views꞉> 
+(js/Character.valueOf 114)
+cljs꞉mahjong-helper.views꞉> 
+(js/String.fromCharCode 114)
+cljs꞉mahjong-helper.views꞉> 
+(js/String.fromCharCode 65)
+cljs꞉mahjong-helper.views꞉> 
+(js/String.fromCharCode (- (.charCodeAt "r" 0) 49))
+cljs꞉mahjong-helper.views꞉> 
+(js/String.fromCharCode (- (.charCodeAt "s" 0) 49))
+cljs꞉mahjong-helper.views꞉> 
