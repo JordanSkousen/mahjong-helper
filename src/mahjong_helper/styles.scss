@@ -4,6 +4,49 @@ body {
   font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
+a {
+  color: rgb(0, 166, 255);
+  text-decoration: underline;
+}
+
+.backdrop {
+  z-index: 98;
+  background: rgba($color: #000000, $alpha: 0.4);
+  backdrop-filter: blur(2px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.modal {
+  z-index: 99;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  width: 75%;
+}
+.modal-title {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+.modal button:not(.hand-tile) {
+  display: block;
+  width: 100%;
+  border: 1px solid rgb(219, 219, 219);
+  margin-top: 10px;
+}
+
+.buttons-row {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+}
+
 .title {
   border-bottom: 1px solid black;
   font-size: 1.5em;
@@ -14,9 +57,18 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  a {
+  .title-right {
     float: right;
-    color: rgb(0, 166, 255);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  a {
+    text-decoration: none;
+  }
+  .clear-btn {
+    font-size: 0.8rem;
+    background: rgb(255, 154, 154);
   }
   z-index: 2;
 }
@@ -33,8 +85,25 @@ body {
   backdrop-filter: blur(10px);
   border-top: 1px solid #ddd;
 }
+.keyboard .tile {
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  * {
+    grid-row: 1;
+    grid-column: 1;
+  }
+}
+.keyboard-btn-disabled {
+  background: rgb(184, 184, 184) !important;
+}
+.dragon-name {
+  font-size: 0.7em;
+  line-height: 0px;
+  color: white;
+}
 
-.tile {
+.tile, button {
   font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 1.5em;
   padding: 6px 0;
@@ -51,6 +120,9 @@ body {
     height: 1.5em;
   }
 }
+button {
+  padding: 6px 10px;
+}
 .hand-tile {
   width: 44px;
   height: 58px;
@@ -61,6 +133,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 22px;
+  transition: transform 0.2s;
   svg {
     display: inline;
     width: 16px;
@@ -77,12 +150,31 @@ body {
   justify-content: center;
 }
 .editing-tile {
-  background: #fff2cf;
+  /*background: #fff2cf;
   animation-name: editing-blink;
   animation-duration: 1.5s;
-  animation-iteration-count: infinite;
+  animation-iteration-count: infinite;*/
   border: 2px solid #fff2cf;
 }
+
+.charleston {
+  margin-top: 20px;
+  text-align: right;
+}
+.arrow-btn {
+  $h: 36px;
+  font-size: 16px;
+  box-shadow: none;
+  clip-path: polygon(0% 0%, calc(100% - $h/2) 0%, 100% 50%, calc(100% - $h/2) 100%, 0 100%);
+  height: $h;
+  padding-right: 20px;
+}
+.charleston-selected-tile {
+  opacity: 30%;
+  transform: rotate(-14deg) scale(85%);
+}
+
+
 .pattern {
   font-size: 1.6em;
 }

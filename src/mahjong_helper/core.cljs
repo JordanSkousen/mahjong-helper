@@ -1,6 +1,6 @@
 (ns mahjong-helper.core
   (:require ["@mui/material/styles" :refer [createTheme ThemeProvider]]
-            [mahjong-helper.handlers :as handlers]
+            [mahjong-helper.handlers]
             [mahjong-helper.router :refer [init-router!]]
             [mahjong-helper.subs]
             [mahjong-helper.views :as views]
@@ -24,6 +24,6 @@
                (.getElementById js/document "app")))
 
 (defn init []
-  (rf/dispatch-sync [::handlers/initialize-db])
+  (rf/dispatch-sync [:initialize-db])
   (install-devtools)
   (mount-root))
