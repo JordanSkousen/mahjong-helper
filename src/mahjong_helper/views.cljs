@@ -288,10 +288,7 @@
           "MAHJONG HELPER"
           [:div.title-right
            [:button.clear-btn {:on-click #(dispatch [:open-reset-modal])}
-            "Reset"]
-           [:a {:href "/2026-Mahjong-Cheatsheet-by-Jordan-Skousen.pdf"
-                :target "_blank"
-                :rel "noreferrer"} [:span.material-symbols-outlined "print"]]]]]
+            "Reset"]]]]
         [:div {:style {:height "calc(1.5em + 20px)"}}]
         [hand-view]
         (when @(subscribe [:hand-complete?])
