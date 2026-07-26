@@ -3,6 +3,7 @@
             [mahjong-helper.handlers]
             [mahjong-helper.router :refer [init-router!]]
             [mahjong-helper.subs]
+            [mahjong-helper.utils :refer [read-storage]]
             [mahjong-helper.views :as views]
             [devtools.core :as devtools]
             [re-frame.core :as rf]
@@ -24,6 +25,6 @@
                (.getElementById js/document "app")))
 
 (defn init []
-  (rf/dispatch-sync [:initialize-db])
+  (rf/dispatch-sync [:initialize-db (read-storage)])
   (install-devtools)
   (mount-root))

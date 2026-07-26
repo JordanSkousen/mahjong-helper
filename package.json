@@ -8,7 +8,7 @@
   "scripts": {
     "start": "shadow-cljs clj-run mahjong_helper.dev.shadow/watch",
     "clean-debug": "npx rimraf ./public/js",
-    "build": "pnpm clean-debug && shadow-cljs release browser",
+    "build": "pnpm clean-debug && shadow-cljs release browser worker",
     "deploy": "pnpm build && aws s3 sync public/ s3://mahjong.jothedev.com --acl public-read --delete --profile crazyreception@gmail.com && aws cloudfront create-invalidation --distribution-id E2QCYIDZMCEWZU --paths '/*' --profile crazyreception@gmail.com"
   },
   "dependencies": {

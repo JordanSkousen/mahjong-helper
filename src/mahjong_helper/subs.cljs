@@ -61,3 +61,33 @@
  :reset-modal-open?
  (fn [db]
    (:reset-modal-open? db)))
+
+(reg-grab
+ :result-modal-open-pattern
+ (fn [db]
+   (:result-modal-open-pattern db)))
+
+(reg-grab
+ :preview-mode?
+ (fn [db]
+   (:preview-mode? db)))
+
+(reg-grab
+ :theme
+ (fn [db]
+   (get db :theme :jordan)))
+
+(reg-grab
+ :traditional-theme?
+ (fn [db]
+   (= (grab db :theme) :traditional)))
+
+(reg-grab
+ :svg-url
+ (fn [db filename]
+   (str "/img/" (name (grab db :theme)) "/" filename ".svg")))
+
+(reg-grab
+ :settings-modal-open?
+ (fn [db]
+   (:settings-modal-open? db)))

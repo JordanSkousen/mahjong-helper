@@ -33,4 +33,5 @@
                         ;; Fn is Runnable
                        (fn []
                          (.destroy process))))
+    (shadow/watch :worker)
     (shadow/watch :browser)))

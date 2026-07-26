@@ -1,11 +1,11 @@
 (ns mahjong-helper.handlers
-  (:require [re-re-frame.core :refer [reg-event-x grab]]
+  (:require [re-re-frame.core :refer [reg-event-x reg-fx grab]]
             [mahjong-helper.utils :refer [tile-complete?]]))
 
 (reg-event-x
  :initialize-db
- (fn []
-   {:db {}}))
+ (fn [_ db]
+   {:db db}))
 
 (reg-event-x
  :starting-player
@@ -85,6 +85,22 @@
      (assoc db :editing idx))))
 
 (reg-event-x
+ :edit-prev-tile
+ (fn [db]
+   (let [editing-idx (grab db :editing-idx)]
+     {:dispatch [:edit-tile (if (= editing-idx 0)
+                              (dec (grab db :hand-size))
+                              (dec editing-idx))]})))
+
+(reg-event-x
+ :edit-next-tile
+ (fn [db]
+   (let [editing-idx (grab db :editing-idx)]
+     {:dispatch [:edit-tile (if (= editing-idx (dec (grab db :hand-size)))
+                              0
+                              (inc editing-idx))]})))
+
+(reg-event-x
  :open-charleston-modal
  (fn [db]
    (-> db
@@ -119,12 +135,14 @@
  (fn [db]
    (let [ids (->> (get-in db [:charleston :selection])
                   (filter #(true? (val %)))
-                  (map key))]
-     {:db (reduce (fn [db' id]
-                    (assoc-in db' [:hand id] {}))
-                  db
-                  ids)
-      :dispatch-n [[:edit-tile (first (sort ids))]
+                  (map key))
+         hand' (apply dissoc (:hand db) ids)
+         hand'-count (count (keys hand'))]
+     {:db (assoc db :hand (merge (zipmap (range hand'-count)
+                                         (vals hand'))
+                                 (zipmap (range hand'-count (grab db :hand-size))
+                                         (repeat {}))))
+      :dispatch-n [[:edit-tile hand'-count]
                    [:close-charleston-modal]]})))
 
 (reg-event-x
@@ -136,3 +154,34 @@
  :close-reset-modal
  (fn [db]
    (assoc db :reset-modal-open? false)))
+
+(reg-event-x
+ :open-settings-modal
+ (fn [db]
+   (assoc db :settings-modal-open? true)))
+
+(reg-event-x
+ :close-settings-modal
+ (fn [db]
+   (assoc db :settings-modal-open? false)))
+
+(reg-event-x
+ :open-result-modal
+ (fn [db pattern]
+   (assoc db :result-modal-open-pattern pattern)))
+
+(reg-event-x
+ :toggle-preview-mode
+ (fn [db]
+   (update db :preview-mode? not)))
+
+(reg-event-x
+ :theme
+ (fn [db theme]
+   {:db (assoc db :theme theme)
+    ::save-theme theme}))
+
+(reg-fx
+ ::save-theme
+ (fn [theme]
+   (js/window.localStorage.setItem "theme" (name theme))))

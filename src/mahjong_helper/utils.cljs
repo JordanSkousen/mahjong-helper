@@ -1,5 +1,8 @@
 (ns mahjong-helper.utils)
 
+(defn read-storage []
+  {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))})
+
 (def suitless? #{"Flower" "N" "E" "W" "S" "J"})
 
 (defn tile-complete? 

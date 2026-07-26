@@ -1,7 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&display=swap');
 
 body {
   font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+code {
+  font-family: 'Azeret Mono', monospace;
 }
 
 a {
@@ -29,6 +33,8 @@ a {
   border-radius: 10px;
   padding: 10px;
   width: 75%;
+  max-height: calc(100vh - 40px);
+  overflow-y: scroll;
 }
 .modal-title {
   font-size: 1.5em;
@@ -84,6 +90,7 @@ a {
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   backdrop-filter: blur(10px);
   border-top: 1px solid #ddd;
+  z-index: 5;
 }
 .keyboard .tile {
   display: grid;
@@ -92,6 +99,9 @@ a {
   * {
     grid-row: 1;
     grid-column: 1;
+  }
+  img[src*="D.svg"] {
+    filter: invert(1);
   }
 }
 .keyboard-btn-disabled {
@@ -116,7 +126,7 @@ a {
   user-select: none;
   cursor: pointer;
   box-shadow: 2px 2px 3px rgba(0,0,0,0.4);
-  img, svg {
+  img {
     height: 1.5em;
   }
 }
@@ -134,9 +144,13 @@ button {
   justify-content: center;
   font-size: 22px;
   transition: transform 0.2s;
-  svg {
+  img {
     display: inline;
+    width: 22px;
+  }
+  .suit-indicator {
     width: 16px;
+    margin-left: 3px;
   }
 }
 .pending-tile {
@@ -150,11 +164,12 @@ button {
   justify-content: center;
 }
 .editing-tile {
-  /*background: #fff2cf;
-  animation-name: editing-blink;
-  animation-duration: 1.5s;
-  animation-iteration-count: infinite;*/
   border: 2px solid #fff2cf;
+}
+.pending-tile, .editing-tile:not(.suitless-tile) {
+  img {
+    filter: invert(1);
+  }
 }
 
 .charleston {
@@ -177,14 +192,45 @@ button {
 
 .pattern {
   font-size: 1.6em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  border-bottom: 1px solid #eee;
 }
-.ranking {
+.pattern-id {
   font-size: 0.5em;
   min-width: 3em;
   color: gray;
 }
+.pattern-container {
+  width: 100%;
+}
+.pattern-percent {
+  font-size: 0.4em;
+  color: #666;
+  background: #ddd;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  div {
+    background: hsl(0, 73%, 41%);
+    position: absolute;
+    height: 100%;
+    left: 0;
+    top: 0;
+    z-index: 1;
+  }
+  span {
+    z-index: 2;
+    position: relative;
+  }
+}
+.pattern-view {
+  user-select: none;
+}
 .group {
-  img, svg {
+  img {
     height: 0.9em;
     transform: translateY(2px);
   }
@@ -197,17 +243,74 @@ button {
   width: 1.5em;
   transform: translateY(-5px);
 }
-@keyframes editing-blink {
-  0% {
-    background: #fff2cf;
+
+.arrangement-view {
+  .hand-tile {
+    width: 26px;
+    height: 34px;
+    img {
+      width: 14px;
+    }
+    .suit-indicator {
+      width: 9px;
+    }
   }
-  49% {
-    background: #fff2cf;
+}
+.tile-muted {
+  border: 2px dashed #aaa;
+  opacity: 0.3;
+  .suit-indicator {
+    filter: invert(1);
   }
-  50% {
-    background: rgb(248, 245, 235);
+}
+
+$h: 14px;
+$pd: 2px;
+.switch {
+  display: inline-block;
+  width: $h * 2;
+  height: $h;
+  background: #bbb;
+  border-radius: $h;
+  position: relative;
+  .switch-knob {
+    position: absolute;
+    top: $pd;
+    left: $pd;
+    width: $h - $pd * 2;
+    height: $h - $pd * 2;
+    background: white;
+    border-radius: $h;
+    transition: left 0.2s;
   }
-  100% {
-    background: rgb(248, 245, 235);
+}
+.switch-on {
+  background: rgb(19, 193, 19);
+  .switch-knob {
+    left: $pd + $h;
+  }
+}
+
+.btn-sm {
+  font-size: 0.8em;
+}
+
+.button-group {
+  display: flex;
+  button {
+    border-radius: 0;
+    &:first-child {
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+    }
+    &:last-child {
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+    }
+    transition: background 0.2s, color 0.2s;
+  }
+  .button-active {
+    background: rgb(49, 104, 215);
+    color: white;
   }
 }

@@ -1,4 +1,5 @@
-{:deps    {binaryage/devtools          {:mvn/version "1.0.7"}
+{:paths   ["src" "test"]
+ :deps    {binaryage/devtools          {:mvn/version "1.0.7"}
            com.jothedev/re-re-frame    {:mvn/version "0.1.2"}
            day8.re-frame/async-flow-fx {:mvn/version "0.4.0"}
            metosin/reitit              {:mvn/version "0.10.1"}
