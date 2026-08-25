@@ -166,6 +166,13 @@
    (assoc db :reset-modal-open? false)))
 
 (reg-event-x
+ :reset-game
+ (fn [db]
+   (-> db
+       (dissoc :hand :editing :starting-player? :reset-modal-open?)
+       (assoc :starting-modal-open? true))))
+
+(reg-event-x
  :open-settings-modal
  (fn [db]
    (assoc db :settings-modal-open? true)))
