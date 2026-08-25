@@ -15,10 +15,9 @@
 (reg-event-x
  :starting-player
  (fn [db starting?]
-   (-> db
-       (assoc :starting-player? starting?)
-       (assoc :hand (zipmap (range (if starting? 14 13))
-                            (repeat {}))))))
+   (cond-> (assoc db :starting-player? starting?)
+     starting? (update :hand assoc 13 {})
+     (not starting?) (update :hand dissoc 13))))
 
 ;; KEY TYPE RULES
 ;; ================

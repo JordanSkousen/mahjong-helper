@@ -378,6 +378,8 @@
 ;; Web Workers (see worker-pool.cljs) instead of blocking the render.
 ;; :hand tracks which hand the current :rankings were computed for, so
 ;; a stale in-flight computation can be told apart from a fresh one.
+
+;; TODO: move these to re-frame and don't do it the stupid way AI decided on
 (defonce ^:private pattern-rankings (r/atom nil))
 (defonce ^:private rankings-computed-for (atom nil))
 
