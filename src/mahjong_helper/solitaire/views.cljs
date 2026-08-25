@@ -312,7 +312,10 @@
                  (doall
                   (for [[y] ys]
                     (let [left (calc-left x)
-                          top (calc-top y layer-idx)]
+                          top (calc-top y layer-idx)
+                          face-down? (or (and (get-in layer [(dec x) y]) ;; a tile is face down if there are tiles on both its left & right, or if there's a tile above it
+                                              (get-in layer [(inc x) y]))
+                                         (get-in board [(inc layer-idx) x y]))]
                       [:div {:key (str x y)
                              :style {:position :absolute
                                      :opacity (if (> layer-idx view-layer) 0 1)
@@ -327,7 +330,12 @@
                                       :border "0.5px solid black"
                                       :box-sizing "border-box"
                                       :width (str tile-width "px")
-                                      :height (str tile-height "px")}}]
+                                      :height (str tile-height "px")
+                                      :padding 2}}
+                        (when-not face-down?
+                          [:div {:style {:background "rgba(255,255,255,0.5)"
+                                         :width "100%"
+                                         :height "100%"}}])] 
                        (when-not (get-in layer [x (dec y)])
                          ;; only show side if no tile is below this one
                          [:div {:style {:background (get-in COLORS [layer-idx 1])
