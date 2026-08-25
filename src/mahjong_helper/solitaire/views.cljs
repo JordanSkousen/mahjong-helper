@@ -182,6 +182,7 @@
 (def TILE_HEIGHT 40)
 (def TILE_THICKNESS 10)
 (def SCALE_PADDING 40)
+(def BOTTOM_PADDING 80)
 ;; structured as (layer idx) -> [top, side]
 (def COLORS {0 ["#ef9a46" "#b76b2a"]
              1 ["#7754a3" "#4e327c"]
@@ -256,7 +257,7 @@
       (letfn [(set-bounds []
                 (dispatch [::set-view-bounds
                            (- (.-innerWidth js/window) (* SCALE_PADDING 2))
-                           (- (.-innerHeight js/window) (* SCALE_PADDING 2) SETTINGS_PANEL_HEIGHT)]))]
+                           (- (.-innerHeight js/window) (* SCALE_PADDING 2) SETTINGS_PANEL_HEIGHT BOTTOM_PADDING)]))]
         (dispatch [::generate-board])
         (set-bounds)
         (js/window.addEventListener "resize" set-bounds)))
@@ -289,6 +290,7 @@
                         (/ tile-height 2)
                         (* tile-thickness layer-idx))
                      SETTINGS_PANEL_HEIGHT
+                     (/ BOTTOM_PADDING 2)
                      (* SCALE_PADDING 2)))]
           [:<>
            [settings-panel]
