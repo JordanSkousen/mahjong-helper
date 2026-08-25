@@ -13,6 +13,10 @@ a {
   text-decoration: underline;
 }
 
+.menu-btn {
+  margin-right: 5px;
+}
+
 .backdrop {
   z-index: 98;
   background: rgba($color: #000000, $alpha: 0.4);
@@ -44,6 +48,9 @@ a {
   display: block;
   width: 100%;
   border: 1px solid rgb(219, 219, 219);
+}
+
+.modal button:not(.hand-tile):not(.btn-sm) {
   margin-top: 10px;
 }
 
@@ -112,14 +119,14 @@ a {
   line-height: 0px;
   color: white;
 }
-
+$tile-border-radius: 10px;
 .tile, button {
   font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 1.5em;
   padding: 6px 0;
   background: white;
   border: none;
-  border-radius: 10px;
+  border-radius: $tile-border-radius;
   color: #222;
   touch-action: manipulation;
   -webkit-user-select: none;
@@ -153,18 +160,23 @@ button {
     margin-left: 3px;
   }
 }
+#hand-view {
+  .hand-tile {
+    border-color: #ccc;
+  }
+  .editing-tile {
+    border: 2px solid #f1b81a;
+  }
+}
 .pending-tile {
   width: 44px;
   height: 58px;
   border: 2px dashed #999;
-  border-radius: 10px;
+  border-radius: $tile-border-radius;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-.editing-tile {
-  border: 2px solid #fff2cf;
 }
 .pending-tile, .editing-tile:not(.suitless-tile) {
   img {
@@ -172,8 +184,8 @@ button {
   }
 }
 
-.charleston {
-  margin-top: 20px;
+.charleston, .meld {
+  margin-top: 10px;
   text-align: right;
 }
 .arrow-btn {
@@ -184,11 +196,49 @@ button {
   height: $h;
   padding-right: 20px;
 }
+$orange: rgb(243, 142, 26);
+.charleston .arrow-btn {
+  background: $orange;
+}
+$purple: rgb(132, 20, 207);
+.meld .arrow-btn {
+  background: $purple;
+  color: white;
+}
 .charleston-selected-tile {
   opacity: 30%;
   transform: rotate(-14deg) scale(85%);
 }
-
+.melded-tile {
+  position: relative;
+}
+.melded-tile::before {
+  content: "";
+  background: none;
+  border: 4px solid $purple;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: $tile-border-radius;
+}
+.melded-tile::after {
+  content: "M";
+  font-size: 10px;
+  background: $purple;
+  display: block;
+  position: absolute;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  border-radius: $tile-border-radius;
+  width: 15px;
+  height: 15px;
+  color: white !important;
+}
 
 .pattern {
   font-size: 1.6em;
@@ -292,7 +342,7 @@ $pd: 2px;
 }
 
 .btn-sm {
-  font-size: 0.8em;
+  font-size: unset !important;
 }
 
 .button-group {
@@ -312,5 +362,143 @@ $pd: 2px;
   .button-active {
     background: rgb(49, 104, 215);
     color: white;
+  }
+}
+
+.result-modal-top, .result-modal-pattern {
+  margin: -10px;
+  margin-bottom: 10px;
+  padding: 10px;
+}
+.result-modal-top {
+  background: rgb(167, 224, 255);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result-modal-pattern {
+  background: rgb(224, 244, 255);
+}
+
+.chip {
+  background: $orange;
+  color: white;
+  padding: 3px 6px;
+  margin-right: 10px;
+  border-radius: 5px; 
+  font-size: 0.6em;
+  text-transform: uppercase;
+}
+
+.meld-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 58px;
+  &:not(:last-of-type) {
+    padding-right: 20px;
+    border-right: 1px solid gray;
+    margin-right: 10px;
+  }
+}
+
+.solitare-settings-panel {
+  padding: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  position: fixed;
+  backdrop-filter: blur(10px);
+  top: 0;
+  left: 0;
+  width: calc(100% - 40px);
+  z-index: 99;
+  font-size: 0.7em;
+  h1 {
+    display: inline;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+}
+
+.solitare-view-layer-panel {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  background: #aaa;
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  span {
+    margin-bottom: 6px;
+    font-size: 18px;
+  }
+  button {
+    font-size: 0.9em;
+    background: "#666";
+    box-shadow: 2px 2px 3px rgba(0,0,0,0.4);
+  }
+  button:not(:last-of-type) {
+    margin-bottom: 10px;
+  }
+  button.active {
+    background: $orange;
+    color: white;
+  }
+}
+.solitare-settings-symmetry, .solitare-settings-max-layers, .solitare-settings-mahjong-set {
+  align-items: center;
+}
+.solitare-settings-symmetry, .solitare-settings-mahjong-set {
+  flex: 1 0;
+}
+.solitare-settings-max-layers {
+  flex: 2 0;
+}
+
+.solitare-grid {
+  position: absolute;
+  z-index: 1;
+  background: white;
+  border: 0.5px solid #d9d9d9;
+  box-sizing: border-box;
+}
+
+.solitare-grid-labels {
+  position: absolute;
+  color: #999;
+  filter: drop-shadow(1px 1px 1px white) drop-shadow(-1px -1px 1px white);
+  font-size: 0.8rem;
+  z-index: 99;
+  display: grid;
+  padding-bottom: 3px;
+  padding-right: 3px;
+}
+
+.solitare-generate-btn {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+  background: $orange;
+  color: white;
+  font-size: 1.75em;
+  padding: 5px 30px;
+  border-radius: 999px;
+}
+
+@media (max-width: 540px) {
+  .solitare-settings-symmetry {
+    flex: none;
+  }
+  .solitare-settings-max-layers {
+    flex: 1 0;
+  }
+  .solitare-settings-mahjong-set {
+    flex: none;
   }
 }

@@ -44,3 +44,69 @@
     (let [hand ["3B" "3B" "3B" "3C" "3C" "3C"]
           pattern "33a"]
       (is (= 2 (count (solver/find-arrangements pattern hand)))))))
+
+(deftest joker-placement-is-collapsed
+  (testing "which eligible slot a joker lands in — even across two
+            different groups — isn't meaningful and shouldn't fork the
+            results; only the real tiles used should matter"
+    (let [hand ["3B" "6B" "6B" "6D" "J." "J." "N." "E." "W." "S." "F." "F." "F."]
+          pattern "23a26a36b39b(1N.1E.1W.1S.)"
+          arrangements (solver/find-arrangements pattern hand)]
+      (is (= 1 (count arrangements))
+          (str "expected every joker placement to collapse to one arrangement, got: "
+               arrangements)))))
+
+(deftest different-real-tiles-are-not-collapsed-by-joker-blanking
+  (testing "blanking jokers for comparison shouldn't accidentally blank
+            real ties that happen to also be jokers-free alternatives"
+    ;; two different real tiles (5B vs 5C) can each independently fill
+    ;; the lone group — a genuine difference, not a joker artifact.
+    (let [hand ["5B" "5B" "5B" "5C" "5C" "5C"]
+          pattern "35a"]
+      (is (= 2 (count (solver/find-arrangements pattern hand)))))))
+
+(deftest non-contiguous-duplicate-group-placement-is-collapsed
+  (testing "the same literal group (\"12a\") appearing twice with an
+            unrelated group in between is still one interchangeable pool
+            — which of the two slots the lone available tile fills
+            shouldn't fork the results"
+    (let [hand ["2B"]
+          pattern "12a10.12a"
+          arrangements (solver/find-arrangements pattern hand)]
+      (is (= 1 (count arrangements))
+          (str "expected both slot choices to collapse to one arrangement, got: "
+               arrangements)))))
+
+(deftest reported-2b-placement-case-collapses
+  (testing "regression: the exact reported hand/pattern combo where the
+            lone 2B could fill either of two non-adjacent \"12a\" slots"
+    (let [hand ["F." "F." "2B" "2C" "2C" "6D" "6D" "5B" "5B" "5B" "5B" "5C" "5C"]
+          pattern "3F.(12a10.12a16a)32b46c"
+          arrangements (solver/find-arrangements pattern hand)]
+      ;; two genuinely distinct allocations tie for best (which real suit
+      ;; plays "a" vs "b"), but each should appear exactly once — not the
+      ;; three results a naive search would produce from 2B's two homes.
+      (is (= 2 (count arrangements))
+          (str "expected the two 2B slot choices under the same suit "
+               "assignment to collapse, got: " arrangements)))))
+
+(deftest wild-number-shift-is-collapsed
+  (testing "regression: \"4ra4sb4tc\" wants three consecutive numbers,
+            one per free suit — using 5,6 to satisfy r,s is the same
+            underlying match as using them for s,t (r just shifts up to
+            an unused number), and shouldn't fork the results"
+    (let [hand ["F." "F." "2B" "2C" "2C" "6D" "6D" "5B" "5B" "5B" "5B" "5C" "5C"]
+          pattern "2F.4ra4sb4tc"
+          arrangements (solver/find-arrangements pattern hand)]
+      (is (= 1 (count arrangements))
+          (str "expected the r/s vs s/t shift to collapse to one arrangement, got: "
+               arrangements)))))
+
+(deftest distinct-wild-shift-suit-choices-are-not-collapsed
+  (testing "shift-canonicalizing shouldn't accidentally merge genuinely
+            different suit choices for the same shifted role"
+    ;; suit B and suit C can each independently supply the run of fours
+    ;; — real, distinct alternatives, not a shift artifact.
+    (let [hand ["5B" "5B" "5B" "5B" "5C" "5C" "5C" "5C"]
+          pattern "4ra4sb"]
+      (is (= 2 (count (solver/find-arrangements pattern hand)))))))

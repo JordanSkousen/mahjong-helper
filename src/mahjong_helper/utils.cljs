@@ -1,9 +1,32 @@
 (ns mahjong-helper.utils)
 
-(defn read-storage []
-  {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))})
+(defn read-storage [& [ignore-last-state?]] 
+  (let [last-state-time (-> "last-state-time"
+                            js/window.localStorage.getItem
+                            long
+                            js/Date.)
+        use-last-state? (and (not ignore-last-state?)
+                             (<= (- (js/Date.) last-state-time) (* 15 60 1000)))  ;; last state expires after 15 mins
+        last-state (when use-last-state?
+                     (-> "last-state"
+                         js/window.localStorage.getItem
+                         js/JSON.parse
+                         (js->clj :keywordize-keys true)))
+        use-last-state?' (some? (:hand last-state))]
+    {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))
+     :hand (if (>= (count (keys (:hand last-state))) 13)
+             (->> last-state
+                  :hand
+                  (map (fn [[key val]]
+                         [(-> key name int) val]))
+                  (into {}))
+             (zipmap (range (if (:starting-player? last-state) 14 13))
+                     (repeat {})))
+     :starting-player? (:starting-player? last-state)
+     :editing (get last-state :editing 0)
+     :starting-modal-open? (not use-last-state?')}))
 
-(def suitless? #{"Flower" "N" "E" "W" "S" "J"})
+(def suitless? #{"F" "N" "E" "W" "S" "J"})
 
 (defn tile-complete? 
   [{:keys [value suit]}]
@@ -22,9 +45,9 @@
   [val]
   (if (string? val)
     (= val "D")
-    (= (:value val) "Dragon")))
+    (= (:value val) "D")))
 (defn joker?
   [val]
   (if (string? val)
     (= val "J")
-    (= (:value val) "Joker")))
+    (= (:value val) "J")))

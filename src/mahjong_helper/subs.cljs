@@ -1,6 +1,12 @@
 (ns mahjong-helper.subs
-  (:require [mahjong-helper.utils :refer [tile-complete? tile-map->str]]
+  (:require [mahjong-helper.const :refer [all-tiles]]
+            [mahjong-helper.utils :refer [tile-complete? tile-map->str]]
             [re-re-frame.core :refer [reg-grab grab]])) 
+
+(reg-grab
+ :starting-modal-open?
+ (fn [db]
+   (:starting-modal-open? db)))
 
 (reg-grab
  :starting-player?
@@ -91,3 +97,34 @@
  :settings-modal-open?
  (fn [db]
    (:settings-modal-open? db)))
+
+(reg-grab
+ :creating-tile-disallowed?
+ (fn [db tile]
+   (when (tile-complete? tile)
+     (let [tile-str (tile-map->str tile)
+           hand-as-strs (->> (dissoc (grab db :hand) (grab db :editing-idx))
+                             vals
+                             (filter tile-complete?)
+                             (map tile-map->str))
+           remaining-tile-counts (reduce (fn [all-tiles' tile-str]
+                                           (update all-tiles' tile-str dec))
+                                         all-tiles
+                                         hand-as-strs)]
+       (when-not (nil? (get remaining-tile-counts tile-str))
+         (<= (get remaining-tile-counts tile-str) 0))))))
+
+(reg-grab
+ :meld-modal-open?
+ (fn [db]
+   (get-in db [:meld-modal :open?])))
+
+(reg-grab
+ :meld-modal-groups
+ (fn [db]
+   (get-in db [:meld-modal :groups])))
+
+(reg-grab
+ :meld-modal-show-invalid?
+ (fn [db]
+   (get-in db [:meld-modal :show-invalid?])))

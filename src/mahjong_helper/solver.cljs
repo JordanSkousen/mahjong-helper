@@ -204,6 +204,144 @@
           {}
           (map-indexed vector slots)))
 
+(defn- blank-jokers
+  "Exactly which flexible slot a joker happens to land in (or which one
+   is left empty instead) isn't meaningful to a player — a joker is
+   equally free to fill any of the eligible spots, including ones in a
+   different group. Replacing joker entries with nil before comparing
+   arrangements collapses all such placements down to whichever real
+   tiles were actually used, which is the only thing that differs."
+  [assignment]
+  (mapv #(when-not (= % "J.") %) assignment))
+
+(defn- canonicalize-duplicate-groups
+  "The exact same 3-char group (mult+val+suit) can appear more than once
+   in a pattern, not necessarily back-to-back (e.g. \"12a\" showing up
+   twice with an unrelated group in between). Those slots are just as
+   interchangeable as adjacent ones in the same group — which one ends
+   up filled when there isn't enough to fill all of them is arbitrary —
+   but the DFS's own dedup only looks at immediately-adjacent slots, so
+   non-contiguous repeats of a group slip through. Canonicalizes by
+   sorting each group's own slot values back into its own slots (filled
+   tiles first, then nils), independent of which specific slot the DFS
+   happened to fill."
+  [pattern assignment]
+  (let [slots (pattern-slots pattern)
+        by-group (reduce (fn [acc [i group]] (update acc group (fnil conj []) i))
+                         {}
+                         (map-indexed vector slots))]
+    (reduce (fn [asn idxs]
+              (if (< (count idxs) 2)
+                asn
+                (let [sorted-vals (sort-by (fn [v] [(if v 0 1) v]) (map assignment idxs))]
+                  (reduce (fn [asn [idx v]] (assoc asn idx v)) asn (map vector idxs sorted-vals)))))
+            assignment
+            (vals by-group))))
+
+(defn- wild-family-key
+  "Buckets a pattern-group by (wild alphabet, mult) if its val is a wild
+   number letter (r-z or i-q), else nil. Groups sharing a bucket use the
+   same alphabet and need the same count, so a shift within that bucket
+   is (potentially) a valid relabeling — see canonicalize-wild-shift."
+  [group]
+  (let [[mul val] group]
+    (cond
+      (pv-wild-num? val) [:wilds1 mul]
+      (pv-wild-num2? val) [:wilds2 mul]
+      :else nil)))
+
+(defn- canonicalize-wild-shift
+  "A pattern like \"4ra4sb4tc\" asks for the same count of three
+   *consecutive* numbers, one per (independently free) suit. r/s/t don't
+   correspond to specific real numbers, so using real numbers 5,6 to
+   satisfy roles r,s is the same underlying match as using them for
+   roles s,t instead (r just becomes the next unused number below). Only
+   valid when every member of the family shares the same mult — shifting
+   would otherwise change how many of a number are actually required.
+
+   Left-aligns each such family so its lowest-alphabet member always
+   holds the lowest achieved real number: shift by whatever offset moves
+   the lowest-alphabet-position member with any filled slots down to the
+   family's own lowest alphabet position, remapping both the assignment
+   (each member's slots take over the content `delta` positions ahead of
+   it) and every letter's context binding (read via the shared global
+   alphabet, since pv-wild-map always binds the whole 9-letter run
+   together — this is what keeps unrelated, unshifted letters like a
+   family's own higher tail consistent whether or not this pass fires)."
+  [pattern {:keys [context assignment]}]
+  (let [groups (pattern-groups (string/replace pattern #"[()]" ""))
+        indexed (first
+                 (reduce (fn [[acc i] group]
+                           (let [[mul] group mul (int mul)]
+                             [(conj acc {:group group :start i :end (+ i mul)}) (+ i mul)]))
+                         [[] 0]
+                         groups))
+        families (->> indexed
+                     (filter #(wild-family-key (:group %)))
+                     (group-by #(wild-family-key (:group %)))
+                     vals
+                     (filter #(> (count %) 1)))]
+    (reduce
+     (fn [{:keys [context assignment]} members]
+       (let [wilds (if (= :wilds1 (first (wild-family-key (:group (first members)))))
+                     WILDS1 WILDS2)
+             pos-of (fn [m] (string/index-of wilds (nth (:group m) 1)))
+             filled? (fn [m] (some some? (subvec assignment (:start m) (:end m))))
+             min-pos (apply min (map pos-of members))
+             filled-positions (->> members (filter filled?) (map pos-of))]
+         (if (empty? filled-positions)
+           {:context context :assignment assignment}
+           (let [delta (- (apply min filled-positions) min-pos)
+                 pos->letter (fn [p] (when (< -1 p (count wilds)) (nth wilds p)))
+                 by-pos (zipmap (map pos-of members) members)
+                 ;; each member's own suit-letter takes over the suit
+                 ;; binding of whichever member is `delta` positions
+                 ;; ahead — same idea as the number shift below, but for
+                 ;; the group's own written suit-letter (a/b/c) rather
+                 ;; than its wild-number letter (r/s/t...)
+                 suit-letters (map #(nth (:group %) 2) members)
+                 new-context (as-> context ctx
+                              (reduce (fn [ctx p]
+                                        (let [letter (pos->letter p)
+                                              src (pos->letter (+ p delta))
+                                              v (when src (get context src))]
+                                          (if v (assoc ctx letter v) (dissoc ctx letter))))
+                                      ctx
+                                      (range (count wilds)))
+                              (reduce (fn [ctx m]
+                                        (let [src (get by-pos (+ (pos-of m) delta))
+                                              v (when src (get context (nth (:group src) 2)))]
+                                          (if v (assoc ctx (nth (:group m) 2) v) ctx)))
+                                      (apply dissoc ctx suit-letters)
+                                      members))
+                 updates (mapcat (fn [m]
+                                   (let [src (get by-pos (+ (pos-of m) delta))
+                                         width (- (:end m) (:start m))]
+                                     (map vector
+                                          (range (:start m) (:end m))
+                                          (if src
+                                            (subvec assignment (:start src) (:end src))
+                                            (repeat width nil)))))
+                                 members)]
+             {:context new-context
+              :assignment (reduce (fn [asn [idx v]] (assoc asn idx v)) assignment updates)}))))
+     {:context context :assignment assignment}
+     families)))
+
+(defn- trim-irrelevant-context
+  "pv-wild-map binds the *whole* 9-letter alphabet as a side effect of
+   binding any one wild letter, even ones the pattern never references
+   (e.g. binding \"r\" also binds \"z\", unused here, to some arithmetic
+   leftover). canonicalize-wild-shift needs to read through those unused
+   letters to compute a correct shift, but leaving them in the final
+   context makes two otherwise-identical canonical forms compare unequal
+   whenever one path shifted (dropping the out-of-range tail) and
+   another didn't (keeping whatever pv-wild-map happened to leave
+   there). Trimming down to only the letters the pattern actually uses
+   makes that irrelevant leftover disappear from the comparison."
+  [pattern context]
+  (into {} (filter (fn [[k _]] (or (#{"a" "b" "c"} k) (string/includes? pattern k)))) context))
+
 (defn- canonicalize-arrangement
   "Collapses arrangements that are pure relabelings of each other — e.g.
    \"a\" bound to Crak and \"b\" to Dot vs. \"a\" to Dot and \"b\" to
@@ -212,7 +350,9 @@
    whose slot shapes match are grouped, then within each group renamed
    canonically by sorting on which real suit they're bound to (unbound
    sorts last), so every relabeling of the same underlying match reduces
-   to one canonical {:context :assignment}."
+   to one canonical {:context :assignment}. Joker placement and
+   duplicate-group slot choice are likewise normalized away (see
+   blank-jokers and canonicalize-duplicate-groups)."
   [pattern {:keys [context assignment]}]
   (let [slots (pattern-slots pattern)
         by-letter (letter-slot-indices slots)
@@ -220,31 +360,36 @@
         classes (->> (keys by-letter)
                     (group-by profile)
                     vals
-                    (filter #(> (count %) 1)))]
-    (reduce
-     (fn [{:keys [context assignment]} class]
-       (let [canonical-names (vec (sort class))
-             by-suit (sort-by (fn [l] [(if (get context l) 0 1) (get context l)]) class)
-             mapping (zipmap by-suit canonical-names)
-             ;; strip the whole class first, then add each mapped binding
-             ;; back in — folding dissoc+assoc together per-letter would
-             ;; let a later letter's dissoc erase an earlier letter's assoc
-             ;; whenever the swap round-trips through the same key
-             new-context (reduce (fn [ctx old-letter]
-                                   (if-let [suit (get context old-letter)]
-                                     (assoc ctx (mapping old-letter) suit)
-                                     ctx))
-                                 (apply dissoc context class)
-                                 class)
-             updates (mapcat (fn [old-letter]
-                               (map vector
-                                    (get by-letter (mapping old-letter))
-                                    (map assignment (get by-letter old-letter))))
-                             class)]
-         {:context new-context
-          :assignment (reduce (fn [asn [idx v]] (assoc asn idx v)) assignment updates)}))
-     {:context context :assignment assignment}
-     classes)))
+                    (filter #(> (count %) 1)))
+        {:keys [context assignment]}
+        (reduce
+         (fn [{:keys [context assignment]} class]
+           (let [canonical-names (vec (sort class))
+                 by-suit (sort-by (fn [l] [(if (get context l) 0 1) (get context l)]) class)
+                 mapping (zipmap by-suit canonical-names)
+                 ;; strip the whole class first, then add each mapped binding
+                 ;; back in — folding dissoc+assoc together per-letter would
+                 ;; let a later letter's dissoc erase an earlier letter's assoc
+                 ;; whenever the swap round-trips through the same key
+                 new-context (reduce (fn [ctx old-letter]
+                                       (if-let [suit (get context old-letter)]
+                                         (assoc ctx (mapping old-letter) suit)
+                                         ctx))
+                                     (apply dissoc context class)
+                                     class)
+                 updates (mapcat (fn [old-letter]
+                                   (map vector
+                                        (get by-letter (mapping old-letter))
+                                        (map assignment (get by-letter old-letter))))
+                                 class)]
+             {:context new-context
+              :assignment (reduce (fn [asn [idx v]] (assoc asn idx v)) assignment updates)}))
+         {:context context :assignment (blank-jokers assignment)}
+         classes)
+        {:keys [context assignment]}
+        (canonicalize-wild-shift pattern {:context context :assignment assignment})]
+    {:context (trim-irrelevant-context pattern context)
+     :assignment (canonicalize-duplicate-groups pattern assignment)}))
 
 (def ^:private max-arrangements 24)
 

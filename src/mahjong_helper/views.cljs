@@ -1,24 +1,88 @@
 (ns mahjong-helper.views
-  (:require [clojure.string :as string]
+  (:require ["@dnd-kit/react" :refer [DragDropProvider useDraggable useDroppable]]
+            [clojure.string :as string]
             [goog.string :as gstring]
-            [mahjong-helper.const :refer [patterns suits tile-keys WILDS1 WILDS2 all-tiles]]
+            [mahjong-helper.const :refer [patterns suits tile-keys WILDS1 WILDS2]]
             [mahjong-helper.modal :refer [Modal]]
             [mahjong-helper.solver :refer [pattern-groups find-arrangements
                                            groups-with-slots resolve-group-str]]
-            [mahjong-helper.utils :refer [read-storage tile-map->str tile-complete? suitless? dragon?]]
+            [mahjong-helper.utils :refer [read-storage suitless? dragon?]]
+            [mahjong-helper.views.menu-btn :refer [Menu-Btn]]
             [mahjong-helper.worker-pool :refer [rank-patterns-async]]
             [re-re-frame.core :refer [subscribe dispatch]]
             [reagent.core :as r]))
 
+(defn hand-tile-inner
+  [idx tile type]
+  (let [{:keys [value suit]} tile
+        type (or type :normal)
+        normal? (= type :normal)
+        editing? (and normal?
+                      (= idx @(subscribe [:editing-idx]))) 
+        soap? (and (dragon? tile) (= suit "D"))]
+    (if soap?
+      [:img {:src @(subscribe [:svg-url 0])
+             :height "36px"
+             :draggable false}]
+      
+      [:<>
+       (let [{:keys [icon]} (->> tile-keys
+                                 (filter #(and (= (:key %) value)
+                                               (not (:suit? %))))
+                                 first)]
+         (cond
+           (fn? icon)
+           [icon {:fill (if (or editing? (not suit)) "#000" "#fff")}]
+           icon
+           [:img {:src @(subscribe [:svg-url icon])
+                  :height "36px"
+                  :draggable false}]
+           :else
+           (or value "·")))
+       (when (and suit (not (dragon? tile)))
+         [:img.suit-indicator {:src @(subscribe [:svg-url (get-in suits [suit :icon])])
+                               :draggable false}])])))
+
+(defn hand-tile-style
+  [idx tile type]
+  (let [{:keys [suit]} tile
+        type (or type :normal)
+        normal? (= type :normal)
+        editing? (and normal?
+                      (= idx @(subscribe [:editing-idx])))
+        soap? (and (dragon? tile) (= suit "D"))]
+    {:background (when-not soap?
+                   (cond
+                     (and suit editing?) (get-in suits [suit :color-light])
+                     suit (get-in suits [suit :color])
+                     :else "#fff"))
+     :color (if (and suit (not editing?)) "white" "black")}))
+
+(defn draggable-hand-tile
+  [{:keys [idx tile group-id id disabled?]}]
+  (let [ref (.-ref (useDraggable #js {:id (if group-id 
+                                            (str group-id "/" id)
+                                            idx)}))]
+    [:div.tile.hand-tile {:ref ref
+                          :style (merge (hand-tile-style idx tile type)
+                                        (when disabled?
+                                          {:opacity 0.25
+                                           :pointer-events :none}))}
+     [hand-tile-inner idx tile :meld]]))
+
 (defn hand-tile
   "A completed tile in the hand; tap to edit it."
-  [idx tile charleston?]
-  (let [{:keys [value suit]} tile
+  [idx tile type]
+  (let [{:keys [value suit melded?]} tile
+        type (or type :normal)
+        normal? (= type :normal)
+        charleston? (= type :charleston)
         needs-suit? (not (suitless? value))
-        editing? (and (not charleston?)
+        editing? (and normal?
                       (= idx @(subscribe [:editing-idx])))
         charleston-selected? (and charleston?
                                   (get @(subscribe [:charleston-selection]) idx))
+
         soap? (and (dragon? tile) (= suit "D"))]
     [:button.tile.hand-tile {:on-click #(if charleston?
                                           (dispatch [:toggle-charleston-select idx])
@@ -33,32 +97,11 @@
                                      (when editing?
                                        "editing-tile")
                                      (when charleston-selected?
-                                       "charleston-selected-tile")]
-                             :style {:border-color (if editing? "#f1b81a" "#ccc")
-                                     :background (when-not soap?
-                                                   (cond
-                                                     (and suit editing?) (get-in suits [suit :color-light])
-                                                     suit (get-in suits [suit :color])
-                                                     :else "#fff"))
-                                     :color (if (and suit (not editing?)) "white" "black")}}
-     (if soap?
-       [:img {:src @(subscribe [:svg-url 0])
-              :height "36px"}]
-
-       [:<>
-        (let [{:keys [icon]} (->> tile-keys
-                                  (filter #(= (:key %) value))
-                                  first)]
-          (cond
-            (fn? icon)
-            [icon {:fill (if (or editing? (not suit)) "#000" "#fff")}]
-            icon
-            [:img {:src @(subscribe [:svg-url icon])
-                   :height "36px"}]
-            :else
-            (or value "·")))
-        (when (and suit (not (dragon? tile)))
-          [:img.suit-indicator {:src @(subscribe [:svg-url (get-in suits [suit :icon])])}])])]))
+                                       "charleston-selected-tile")
+                                     (when melded?
+                                       "melded-tile")]
+                             :style (hand-tile-style idx tile type)}
+     [hand-tile-inner idx tile type]]))
 
 (defn hand-view []
   (let [hand @(subscribe [:hand])]
@@ -80,16 +123,7 @@
            ^{:key idx} [hand-tile idx tile])))]]))
 
 (defn keyboard []
-  (let [editing-idx @(subscribe [:editing-idx])
-        hand-as-strs (->> (dissoc @(subscribe [:hand]) editing-idx)
-                          vals
-                          (filter tile-complete?)
-                          (map tile-map->str))
-        remaining-tile-counts (reduce (fn [all-tiles' tile-str]
-                                        (update all-tiles' tile-str dec))
-                                      all-tiles
-                                      hand-as-strs)
-        editing @(subscribe [:editing])
+  (let [editing @(subscribe [:editing])
         editing-dragon? (dragon? editing)]
     [:div {:style {:display "grid"
                    :grid-template-columns "repeat(4, 1fr)"
@@ -101,11 +135,9 @@
                                                                   item)
               disabled? (if-not (nil? disabled?)
                           disabled?
-                          (let [tile-that-would-be-created-if-button-was-pressed (assoc editing (if suit? :suit :value) key)
-                                ttwbcibwp-str (tile-map->str tile-that-would-be-created-if-button-was-pressed)]
-                            (when-not (nil? (get remaining-tile-counts ttwbcibwp-str))
-                              (<= (get remaining-tile-counts ttwbcibwp-str) 0))))]
-          [:button.tile {:key key
+                          (let [tile-that-would-be-created-if-button-was-pressed (assoc editing (if suit? :suit :value) key)]
+                            @(subscribe [:creating-tile-disallowed? tile-that-would-be-created-if-button-was-pressed])))]
+          [:button.tile {:key (str (when suit? "suit-") key)
                          :on-click #(when-not disabled?
                                       (if on-click
                                         (on-click)
@@ -120,7 +152,8 @@
               (fn? icon)
               [icon]
               icon
-              [:img {:src @(subscribe [:svg-url icon])}]
+              [:img {:src @(subscribe [:svg-url icon])
+                     :draggable false}]
               :else
               key)]
            (when suit?
@@ -162,11 +195,12 @@
         ;; suited icon (dragon)
         (= val "D")
         (let [url @(subscribe [:svg-url (->> tile-keys
-                                             (filter #(= (:key %) "Dragon"))
+                                             (filter #(and (not (:suit? %))
+                                                           (= (:key %) "D")))
                                              first
                                              :icon)])]
           [:span {:style {:background-color color
-                          "-webkit-mask" (str "url(" url ") no-repeat center")
+                          "WebkitMask" (str "url(" url ") no-repeat center")
                           :mask (str "url(" url ") no-repeat center")
                           :display :inline-block
                           :width "0.7em"
@@ -200,7 +234,10 @@
                   "c" "#6a52a2"
                   "black"))]
     [:span.group {:style {:color color}}
-     (repeat (int mul) (group-glyph val color))]))
+     (doall
+      (for [idx (range mul)]
+        ^{:key idx}
+        [group-glyph val color]))]))
 
 (defn display-pattern
   [pattern inline?]
@@ -219,9 +256,11 @@
                            ^{:key idx}
                            [:span (->> s
                                        pattern-groups
-                                       (map (fn [group]
-                                              ^{:key group}
-                                              [:span (display-group group) (when (even? idx) " ")]))) " "]))))
+                                       (map-indexed (fn [idx2 group]
+                                                      ^{:key (str idx "-" idx2)}
+                                                      [:span (display-group group) (when (even? idx) " ")]))
+                                       doall) " "])))
+          doall)
      (when traditional-theme?
        [:span {:style {:font-size "0.6em"
                        :color "#666"
@@ -242,6 +281,7 @@
        [:img.closed {:src @(subscribe [:svg-url "Closed"])
                      :alt "CLOSED"}])]))
 
+
 (defn tile-face
   "Renders a concrete 2-char tile string (\"5B\", \"N.\", \"F.\", \"DB\",
    \"DD\" for soap...) the way hand-tile does. `muted?` shows it as a
@@ -249,10 +289,10 @@
   [tile-str & [{:keys [muted?]}]]
   (let [value (subs tile-str 0 1)
         suit (let [s (subs tile-str 1 2)] (when (not= s ".") s))
-        tile-key (case value "D" "Dragon" "F" "Flower" value)
-        soap? (and (= value "D") (= suit "D"))
+        soap? (and (dragon? value) (= suit "D"))
         {:keys [icon]} (->> tile-keys
-                            (filter #(= (:key %) tile-key))
+                            (filter #(and (= (:key %) value)
+                                          (not (:suit? %))))
                             first)]
     [:div.tile.hand-tile {:class (when muted? "tile-muted")
                           :style {:background (when-not soap?
@@ -282,36 +322,39 @@
       [:div {:style {:display "flex" :gap "3px"}}
        (doall
         (for [[i tile] (map-indexed vector tiles)]
-          ^{:key i}
-          (cond
-            tile [tile-face tile]
+          (-> (cond
+                tile [tile-face tile]
 
-            (resolve-group-str context group)
-            [tile-face (resolve-group-str context group) {:muted? true}]
+                (resolve-group-str context group)
+                [tile-face (resolve-group-str context group) {:muted? true}]
 
-            :else
-            (let [[_ val suit] group
-                  color (case suit "a" "#d18e29" "b" "#6fc7b3" "c" "#6a52a2" "black")]
-              [:div.tile.hand-tile {:style {:opacity 0.4
-                                            :border "2px dashed #aaa"
-                                            :color color}}
-               [group-glyph val color]]))))]))])
+                :else
+                (let [[_ val suit] group
+                      color (case suit "a" "#d18e29" "b" "#6fc7b3" "c" "#6a52a2" "black")]
+                  [:div.tile.hand-tile {:style {:opacity 0.4
+                                                :border "2px dashed #aaa"
+                                                :color color}}
+                   [group-glyph val color]]))
+              (with-meta {:key i}))))]))])
 
 (defn result-modal []
   (let [pattern @(subscribe [:result-modal-open-pattern])
         hand-as-strs @(subscribe [:hand-as-strs])
-        {:keys [id]} (get patterns pattern)
+        {:keys [id category]} (get patterns pattern)
         arrangements (when pattern (find-arrangements pattern hand-as-strs))]
     [Modal {:open? (some? pattern)
-            :title [:span {:style {:font-weight :normal}}
-                    [:code {:style {:color :gray
-                                    :font-weight :normal}}
-                     "#" id " "]
-                    [display-pattern pattern true]]
+            :title [:div {:style {:font-weight :normal}}
+                    [:div.result-modal-top
+                     [:span.chip category]
+                     (when-not @(subscribe [:traditional-theme?])
+                       [:code {:style {:color :gray
+                                       :font-weight :normal}}
+                        "#" id " "])]
+                    [:div.result-modal-pattern
+                     [display-pattern pattern true]]]
             :closable? true
             :on-close #(dispatch [:open-result-modal nil])}
      [:div.result-modal
-      [:hr]
       (when pattern
         (if (<= (count arrangements) 1)
           [arrangement-view pattern (first arrangements)]
@@ -372,53 +415,73 @@
              [:div.switch-knob]]
             " Preview Mode"]]
           [:div {:style {:opacity (when computing? 0.5)}}
-           (for [{:keys [id pattern ranking]} (->> rankings
-                                                   (map (fn [[pattern ranking]]
-                                                          {:id (get-in patterns [pattern :id])
-                                                           :pattern pattern
-                                                           :ranking ranking}))
-                                                   (sort-by :id)
-                                                   (sort-by :ranking >))
-                 :let [ranking-pct (/ ranking @(subscribe [:hand-size]))]]
-             ^{:key pattern}
-             [:div.pattern {:on-click #(dispatch [:open-result-modal pattern])}
-              (when-not traditional-theme?
-                [:code.pattern-id "#" id])
-              [:div.pattern-container
-               (if preview-mode?
-                 ;; only pay for find-arrangements on the ~130 patterns
-                 ;; when it's actually going to be shown
-                 [arrangement-view pattern (first (find-arrangements pattern hand-as-strs 1))]
-                 [display-pattern pattern])
-               [:div.pattern-percent
-                [:div {:style {:width (str (max 1 (* ranking-pct 100)) "%")
-                               :background (str "hsl(" (* ranking-pct 120) ", 73%, 41%)")}}]
-                [:span (/ (js/Math.floor (* ranking-pct 1000)) 10) "%"]]]
-              [:a.pattern-view [:span.material-symbols-outlined "visibility"]]])]]]))))
+           (doall
+            (for [{:keys [id pattern ranking arrangement]}
+                  (->> rankings
+                       (map (fn [[pattern {:keys [ranking arrangement]}]]
+                              {:id (get-in patterns [pattern :id])
+                               :pattern pattern
+                               :ranking ranking
+                               :arrangement arrangement}))
+                       (sort-by :id)
+                       (sort-by :ranking >))
+                  :let [ranking-pct (/ ranking 14) ;; this should always be 14 since you need 14 tiles to get mahjong, duh
+                        ]] 
+              ^{:key pattern}
+              [:div.pattern {:on-click #(dispatch [:open-result-modal pattern])}
+               (when-not traditional-theme?
+                 [:code.pattern-id "#" id])
+               [:div.pattern-container
+                (if preview-mode?
+                  ;; precomputed in the worker alongside the ranking, so
+                  ;; toggling Preview Mode doesn't force a synchronous
+                  ;; find-arrangements pass over every pattern
+                  [arrangement-view pattern arrangement]
+                  [display-pattern pattern])
+                [:div.pattern-percent
+                 [:div {:style {:width (str (max 1 (* ranking-pct 100)) "%")
+                                :background (str "hsl(" (* ranking-pct 120) ", 73%, 41%)")}}]
+                 [:span (/ (js/Math.floor (* ranking-pct 1000)) 10) "%"]]]
+               [:span.pattern-view {:style {:color "rgb(0, 166, 255)"}}
+                [:span.material-symbols-outlined "visibility"]]]))]]]))))
 
 (defn settings []
-  (let [theme @(subscribe [:theme])]
-    [:div
-     "Theme: "
-     [:div.button-group {:style {:display :inline-flex
-                                 :width :fit-content}}
-      (doall
-       (for [[key label] {:jordan "Jordan's"
-                          :traditional "Traditional"}]
-         [:button.btn-sm {:class (when (= theme key) "button-active")
-                          :on-click #(dispatch [:theme key])}
-          label]))]]))
+  (let [theme @(subscribe [:theme])
+        starting-player? @(subscribe [:starting-player?])]
+    [:div {:style {:font-size "1.2em"}}
+     [:div {:style {:display :flex
+                    :align-items :centfr}}
+      "Are you starting player?"
+      [:div.button-group {:style {:margin-left 10 
+                                  :display :inline-flex
+                                  :flex "1 0"
+                                  }}
+       [:button.btn-sm {:class (when starting-player? "button-active") 
+                        :on-click #(dispatch [:starting-player true])}
+        "Yes"]
+       [:button.btn-sm {:class (when-not starting-player? "button-active")
+                        :on-click #(dispatch [:starting-player false])}
+        "No"]]]
+     [:div {:style {:margin-top 10}}
+      "Theme: "
+      [:div.button-group {:style {:display :inline-flex
+                                  :width :fit-content}}
+       (doall
+        (for [[key label] {:jordan "Jordan's"
+                           :traditional "Traditional"}]
+          [:button.btn-sm {:class (when (= theme key) "button-active")
+                           :on-click #(dispatch [:theme key])}
+           label]))]]]))
 
 (defn starting-modal [] 
-  [Modal {:open? (nil? @(subscribe [:starting-player?]))
-          :title "Are you starting player?"}
-   [:button {:style {:color "green"}
-             :on-click #(dispatch [:starting-player true])}
-    "Yes"]
-   [:button {:on-click #(dispatch [:starting-player false])}
-    "No"]
+  [Modal {:open? @(subscribe [:starting-modal-open?])
+          :title "Settings"}
+   [settings]
    [:hr]
-   [settings]])
+   [:button {:style {:background "rgb(10, 159, 17)"
+                     :color "white"}
+             :on-click #(dispatch [:close-starting-modal])}
+    "Start"]])
 
 (defn charleston-modal []
   (let [hand @(subscribe [:hand])]
@@ -433,7 +496,7 @@
       (doall
        (for [idx (range @(subscribe [:hand-size]))]
          (let [tile (get hand idx)]
-           ^{:key idx} [hand-tile idx tile true])))]
+           ^{:key idx} [hand-tile idx tile :charleston])))]
      [:div.buttons-row
       [:button {:style {:background "red"
                         :color "white"
@@ -445,6 +508,74 @@
                         :border :none}
                 :on-click #(dispatch [:save-charleston])}
        "Save"]]]))
+
+(defn meld-drop-zone
+  [group-id id]
+  (let [ref (.-ref (useDroppable #js {:id (str group-id "/" id)}))]
+    [:div.tile.hand-tile.pending-tile {:ref ref}]))
+
+(defn meld-modal []
+  (let [hand @(subscribe [:hand])
+        show-invalid? @(subscribe [:meld-modal-show-invalid?])
+        meld-modal-groups @(subscribe [:meld-modal-groups])
+        meld-modal-groups-flat (->> meld-modal-groups
+                                    vals
+                                    (mapcat vals)
+                                    (apply hash-set))]
+    [Modal {:open? @(subscribe [:meld-modal-open?])
+            :title "Choose all tiles you've melded"
+            :closable? true
+            :on-close #(dispatch [:close-meld-modal])}
+     [:> DragDropProvider {:on-drag-end (fn [evt]
+                                          (when-not (.-canceled evt) 
+                                            (if-let [target (.. evt -operation -target)]
+                                              (let [tile-idx (int (.. evt -operation -source -id))
+                                                    [group-id id] (string/split (.-id target) #"/")]
+                                                (dispatch [:meld-add-to-group (uuid group-id) (int id) tile-idx]))
+                                              (let [[source-group-id source-id] (string/split (.. evt -operation -source -id) #"/")]
+                                                (dispatch [:meld-remove-from-group (uuid source-group-id) (int source-id)])))))}
+      [:div {:style {:display "flex"
+                     :flex-wrap "wrap"
+                     :gap "6px"
+                     :min-height "58px"}}
+       (doall
+        (for [idx (range @(subscribe [:hand-size]))]
+          (let [tile (get hand idx)]
+            ^{:key idx} [:f> draggable-hand-tile {:idx idx 
+                                                  :tile tile
+                                                  :disabled? (some #{idx} meld-modal-groups-flat)}])))]
+      [:hr]
+      [:div {:style {:display "flex"
+                     :flex-wrap "wrap"
+                     :gap "6px"
+                     :min-height "58px"}}
+       (doall
+        (for [[group-id zones] meld-modal-groups]
+          ^{:key group-id} 
+          [:div.meld-group
+           (doall
+            (for [[id tile-idx] zones]
+              (if tile-idx
+                [:f> draggable-hand-tile {:idx tile-idx
+                                          :tile (get hand tile-idx)
+                                          :group-id group-id
+                                          :id id}]
+                [:f> meld-drop-zone group-id id])))]))]
+      (when show-invalid?
+        [:div {:style {:margin "10px 0"
+                       :color :red}}
+         "The tiles you've melded are not valid according to NMJL rules! (Press 'Save' again to ignore.)"])
+      [:div.buttons-row
+       [:button {:style {:background "red"
+                         :color "white"
+                         :border :none}
+                 :on-click #(dispatch [:close-meld-modal])}
+        "Cancel"]
+       [:button {:style {:background "green"
+                         :color "white"
+                         :border :none}
+                 :on-click #(dispatch [:save-meld])}
+        "Save"]]]]))
 
 (defn reset-modal []
   [Modal {:open? @(subscribe [:reset-modal-open?])
@@ -458,7 +589,7 @@
                       :border :none}
               :on-click #(dispatch [:close-reset-modal])}
      "Cancel"]
-    [:button {:on-click #(dispatch [:initialize-db (read-storage)])}
+    [:button {:on-click #(dispatch [:initialize-db (read-storage true)])}
      "Yes, Reset"]]])
 
 (defn settings-modal []
@@ -467,6 +598,11 @@
           :closable? true
           :on-close #(dispatch [:close-settings-modal])}
    [settings] 
+   [:div {:style {:font-size "0.1em"
+                  :text-align :center
+                  :color "gray"
+                  :margin-top 20}}
+    "2026-08-09"]
    [:button {:on-click #(dispatch [:close-settings-modal])}
     "Close"]])
 
@@ -480,7 +616,9 @@
                         [el]
                         (range 10))]
     (when-not (some #(or (= (.-tagName %) "BUTTON")
-                         (= (.-tagName %) "A")) parents)
+                         (= (.-tagName %) "A")
+                         (= (.-className %) "modal")
+                         (= (.-className %) "backdrop")) parents)
       (dispatch [:edit-tile -1]))))
 
 (defn window-keydown
@@ -490,8 +628,14 @@
     (when (> @(subscribe [:editing-idx]) -1)
       (cond
         ;; 1–9
-        (int? (js/Number.parseInt key))
+        (and (int? (js/Number.parseInt key))
+             (> (js/Number.parseInt key) 0))
         (dispatch [:key-value key])
+        ;; 0 = Soap
+        (and (= key "0") 
+             (not @(subscribe [:creating-tile-disallowed? {:value "D" :suit "D"}])))
+        (do (dispatch [:key-value "D"])
+            (dispatch [:key-suit "D"]))
         ;; B = Bamb
         (= key "b")
         (dispatch [:key-suit "B"])
@@ -503,13 +647,13 @@
         (dispatch [:key-suit "D"])
         ;; D = Dragon
         (= key "d")
-        (dispatch [:key-value "Dragon"])
+        (dispatch [:key-value "D"])
         ;; E = East
         (= key "e")
         (dispatch [:key-value "E"])
         ;; F = Flower
         (= key "f")
-        (dispatch [:key-value "Flower"])
+        (dispatch [:key-value "F"])
         ;; G = green (when Dragon entered)
         (and (dragon? editing) (= key "g"))
         (dispatch [:key-suit "B"])
@@ -559,11 +703,13 @@
                       :padding "12px 12px 36px"}}
         [starting-modal]
         [charleston-modal]
+        #_[meld-modal]
         [reset-modal]
         [settings-modal]
         [result-modal]
         [:div.title
          [:div {:style {:padding "10px"}}
+          [Menu-Btn]
           "MAHJONG HELPER"
           [:div.title-right
            [:button {:style {:font-size "0.8rem"
@@ -575,10 +721,14 @@
         [:div {:style {:height "calc(1.5em + 20px)"}}]
         [hand-view]
         (when @(subscribe [:hand-complete?])
-          [:div.charleston
-           [:button.arrow-btn {:style {:background "rgb(243, 142, 26)"}
-                               :on-click #(dispatch [:open-charleston-modal])}
-            "Charleston"]])
+          [:<>
+           [:div.charleston
+            [:button.arrow-btn {:on-click #(dispatch [:open-charleston-modal])}
+             "Charleston"]]
+           
+           [:div.meld
+            [:button.arrow-btn {:on-click #(dispatch [:open-meld-modal])}
+             "Meld"]]])
         [results-view]
         [:div {:style {:visibility :hidden}}
          (when (>= @(subscribe [:editing-idx]) 0)
@@ -596,5 +746,5 @@
         [:div {:style {:display :flex :align-items :center  :margin-bottom "1em"}}
          [:code {:style {:color "gray" :font-size "0.8em" :width "200px" :text-align :right :margin-right "1em"}} "#" id " - " category]
          [display-pattern pattern]]))])
-  (find-arrangements "2F.(23a16a19a)(13b26b19b)(13c16c29c)" @(subscribe [:hand-as-strs]))
+  (find-arrangements "2F.4ra4sb4tc" @(subscribe [:hand-as-strs]))
   )

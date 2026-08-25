@@ -39,8 +39,8 @@
                 {:key "E" :icon "E"}
                 {:key "W" :icon "W"}
                 {:key "S" :icon "S"}
-                {:key "Dragon" :icon "D"}
-                {:key "Flower" :icon "F"}
+                {:key "D" :icon "D"}
+                {:key "F" :icon "F"}
                 {:key "J" :icon "J"}
                 {:disabled? false
                  :key [:span.material-symbols-outlined {:style {:font-size "1em"}} "backspace"]

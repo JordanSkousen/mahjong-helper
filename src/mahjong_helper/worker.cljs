@@ -1,19 +1,32 @@
 (ns mahjong-helper.worker
-  (:require [mahjong-helper.solver :refer [rank-pattern]]))
+  (:require [mahjong-helper.solver :refer [find-arrangements]]))
 
 (defn- rank-chunk
+  "For each pattern, the best-arrangement is computed once and the
+   ranking derived from it (rather than calling rank-pattern separately),
+   since find-arrangements already does that work internally. Preview
+   Mode's per-pattern tile display comes along for free instead of
+   requiring a second, main-thread pass over every pattern."
   [hand chunk-patterns]
   (reduce (fn [m pattern]
-            (assoc m pattern (rank-pattern pattern hand)))
+            (let [arrangement (first (find-arrangements pattern hand 1))
+                  ranking (count (remove nil? (:assignment arrangement)))]
+              (assoc m pattern {:ranking ranking :arrangement arrangement})))
           {}
           chunk-patterns))
 
 (defn- on-message
   [e]
+  ;; `data` is a plain object built by clj->js on the other side of the
+  ;; postMessage boundary — this build and the main :browser build are
+  ;; compiled *separately*, each with its own :advanced-mode property
+  ;; renaming, so `.-hand`/`.-patterns`/`.-id` dot-access can silently
+  ;; look for the wrong (locally-renamed) property name in release
+  ;; builds. unchecked-get reads by literal string key, immune to that.
   (let [data ^js (.-data e)
-        hand (js->clj (.-hand data))
-        chunk-patterns (js->clj (.-patterns data))]
-    (js/postMessage (clj->js {:id (.-id data)
+        hand (js->clj (unchecked-get data "hand"))
+        chunk-patterns (js->clj (unchecked-get data "patterns"))]
+    (js/postMessage (clj->js {:id (unchecked-get data "id")
                               :results (rank-chunk hand chunk-patterns)}))))
 
 (defn init []
