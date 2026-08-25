@@ -1,6 +1,6 @@
 (ns mahjong-helper.router
   (:require [clojure.string :as string]
-            [mahjong-helper.solitare.views :as solitare]
+            [mahjong-helper.solitaire.views :as solitaire]
             [mahjong-helper.views :as home]
             [re-re-frame.core :refer [dispatch reg-event-x reg-fx reg-grab]]
             [reitit.core :as r]
@@ -11,8 +11,8 @@
 (def PAGES
   [{:id :home
     :view home/Main}
-   {:id :solitare
-    :view solitare/Main}])
+   {:id :solitaire
+    :view solitaire/Main}])
 
 (defonce ^:private !router (atom nil))
 (defonce ^:private !history (atom nil))

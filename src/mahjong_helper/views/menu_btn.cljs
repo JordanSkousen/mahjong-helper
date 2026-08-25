@@ -17,8 +17,8 @@
           (doall
            (for [{:keys [key label]} [{:key :home
                                        :label "4 Player Helper"}
-                                      {:key :solitare
-                                       :label "Solitare Generator"}]]
+                                      {:key :solitaire
+                                       :label "Solitaire Generator"}]]
              [:> MenuItem {:key key
                            :selected (= page key)
                            :onClick #(do (dispatch [:goto-page key])

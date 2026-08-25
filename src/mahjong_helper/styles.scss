@@ -197,11 +197,11 @@ button {
   padding-right: 20px;
 }
 $orange: rgb(243, 142, 26);
-.charleston .arrow-btn {
+.btn-orange {
   background: $orange;
 }
 $purple: rgb(132, 20, 207);
-.meld .arrow-btn {
+.btn-purple {
   background: $purple;
   color: white;
 }
@@ -402,7 +402,7 @@ $pd: 2px;
   }
 }
 
-.solitare-settings-panel {
+.solitaire-settings-panel {
   padding: 20px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   position: fixed;
@@ -420,7 +420,7 @@ $pd: 2px;
   }
 }
 
-.solitare-view-layer-panel {
+.solitaire-view-layer-panel {
   position: absolute;
   top: 50%;
   right: 10px;
@@ -444,22 +444,18 @@ $pd: 2px;
   button:not(:last-of-type) {
     margin-bottom: 10px;
   }
-  button.active {
-    background: $orange;
-    color: white;
-  }
 }
-.solitare-settings-symmetry, .solitare-settings-max-layers, .solitare-settings-mahjong-set {
+.solitaire-settings-symmetry, .solitaire-settings-max-layers, .solitaire-settings-mahjong-set {
   align-items: center;
 }
-.solitare-settings-symmetry, .solitare-settings-mahjong-set {
+.solitaire-settings-symmetry, .solitaire-settings-mahjong-set {
   flex: 1 0;
 }
-.solitare-settings-max-layers {
+.solitaire-settings-max-layers {
   flex: 2 0;
 }
 
-.solitare-grid {
+.solitaire-grid {
   position: absolute;
   z-index: 1;
   background: white;
@@ -467,7 +463,7 @@ $pd: 2px;
   box-sizing: border-box;
 }
 
-.solitare-grid-labels {
+.solitaire-grid-labels {
   position: absolute;
   color: #999;
   filter: drop-shadow(1px 1px 1px white) drop-shadow(-1px -1px 1px white);
@@ -478,27 +474,25 @@ $pd: 2px;
   padding-right: 3px;
 }
 
-.solitare-generate-btn {
+.solitaire-generate-btn {
   position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 99;
-  background: $orange;
-  color: white;
   font-size: 1.75em;
   padding: 5px 30px;
   border-radius: 999px;
 }
 
 @media (max-width: 540px) {
-  .solitare-settings-symmetry {
+  .solitaire-settings-symmetry {
     flex: none;
   }
-  .solitare-settings-max-layers {
+  .solitaire-settings-max-layers {
     flex: 1 0;
   }
-  .solitare-settings-mahjong-set {
+  .solitaire-settings-mahjong-set {
     flex: none;
   }
 }

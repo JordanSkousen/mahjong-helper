@@ -1,4 +1,4 @@
-(ns mahjong-helper.solitare.views 
+(ns mahjong-helper.solitaire.views 
   (:require ["@mui/material/Divider" :default Divider]
             ["@mui/material/Stack" :default Stack]
             ["@mui/material/Slider" :default Slider]
@@ -177,18 +177,18 @@
 (defn settings-panel []
   (let [symmetry @(subscribe [::symmetry])
         num-tiles @(subscribe [::num-tiles])]
-    [:div.solitare-settings-panel {:style {:height SETTINGS_PANEL_HEIGHT}}
+    [:div.solitaire-settings-panel {:style {:height SETTINGS_PANEL_HEIGHT}}
      [:div {:style {:display :flex
                     :align-items :center
                     :margin-bottom 10}}
       [Menu-Btn]
-      [:h1 "MAHJONG HELPER - Solitare Generator"]]
+      [:h1 "MAHJONG HELPER - Solitaire Generator"]]
      [:> Divider {:textAlign :left}
       "SETTINGS"]
      [:> Stack {:direction :row
                 :sx {:align-items :center}
                 :spacing 2}
-      [:> Stack {:class "solitare-settings-symmetry"
+      [:> Stack {:class "solitaire-settings-symmetry"
                  :spacing 2}
        [:span "Symmetry"]
        [:div.button-group
@@ -201,7 +201,7 @@
       [:> Divider {:orientation :vertical
                    :variant :middle
                    :flexItem true}]
-      [:> Stack {:class "solitare-settings-max-layers"
+      [:> Stack {:class "solitaire-settings-max-layers"
                  :spacing 2}
        [:span "Max Layers"]
        [:> ((styled Slider) (fn []
@@ -223,7 +223,7 @@
       [:> Divider {:orientation :vertical
                    :variant :middle
                    :flexItem true}]
-      [:> Stack {:class "solitare-settings-mahjong-set"
+      [:> Stack {:class "solitaire-settings-mahjong-set"
                  :spacing 2}
        [:span "Mahjong Set"]
        [:div.button-group
@@ -283,7 +283,7 @@
                (for [y (range min-base-layer-y (inc max-base-layer-y))]
                  (let [left (calc-left x)
                        top (+ (calc-top y 0) tile-thickness)]
-                   [:div.solitare-grid {:key (str x y)
+                   [:div.solitaire-grid {:key (str x y)
                                         :style {:width (str tile-width "px")
                                                 :height (str tile-height "px")
                                                 :left left
@@ -326,7 +326,7 @@
                          top (calc-top y 0)
                          x' (+ x (/ board-width 2))
                          y' (dec (+ (* y -1) (/ board-height 2)))]
-                     [:div.solitare-grid-labels {:key (str x y)
+                     [:div.solitaire-grid-labels {:key (str x y)
                                                  :style {:width (str tile-width "px")
                                                          :height (str tile-height "px")
                                                          :left left
@@ -339,65 +339,65 @@
                                 (= y' (dec board-height)))
                         [:div {:style {:place-self :end}}
                          (inc x')])])))))
-           [:div.solitare-view-layer-panel
+           [:div.solitaire-view-layer-panel
             [:span.material-symbols-outlined "layers"]
             (doall
              (for [idx (keys board)]
                [:button {:key idx
-                         :class (when (= idx view-layer) "active")
+                         :class (when (= idx view-layer) "btn-orange")
                          :on-click #(dispatch [::view-layer idx])}
                 (inc idx)]))]
-           [:button.solitare-generate-btn {:on-click #(dispatch [::generate-board])}
+           [:button.btn-orange.solitaire-generate-btn {:on-click #(dispatch [::generate-board])}
             "Generate"]])))}))
 
 ;; ====================================
 ;; Subscriptions
 (reg-grab
- ::solitare
+ ::solitaire
  (fn [db]
-   (:solitare db)))
+   (:solitaire db)))
 
 (reg-grab
  ::symmetry
- :<- [::solitare]
- (fn [[solitare]]
-   (get solitare :symmetry 4)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (get solitaire :symmetry 4)))
 
 (reg-grab
  ::max-layers
- :<- [::solitare]
- (fn [[solitare]]
-   (get solitare :max-layers 3)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (get solitaire :max-layers 3)))
 
 (reg-grab
  ::num-tiles
- :<- [::solitare]
- (fn [[solitare]]
-   (get solitare :num-tiles 152)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (get solitaire :num-tiles 152)))
 
 (reg-grab
  ::board
- :<- [::solitare]
- (fn [[solitare]]
-   (:board solitare)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (:board solitaire)))
 
 (reg-grab
  ::view-layer
- :<- [::solitare]
- (fn [[solitare]]
-   (:view-layer solitare)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (:view-layer solitaire)))
 
 (reg-grab
  ::view-width
- :<- [::solitare]
- (fn [[solitare]]
-   (:view-width solitare)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (:view-width solitaire)))
 
 (reg-grab
  ::view-height
- :<- [::solitare]
- (fn [[solitare]]
-   (:view-height solitare)))
+ :<- [::solitaire]
+ (fn [[solitaire]]
+   (:view-height solitaire)))
 
 ;; ====================================
 ;; Handlers
@@ -409,34 +409,34 @@
                                 :max-layers (grab db ::max-layers)
                                 :num-tiles (grab db ::num-tiles)
                                 :base-layer {0 {0 true}}})]
-     (update db :solitare merge {:board board
+     (update db :solitaire merge {:board board
                                  :view-layer (-> board keys count dec)} ))))
 
 (reg-event-x
  ::set-view-bounds
  (fn [db width height]
-   (update db :solitare merge {:view-width width
+   (update db :solitaire merge {:view-width width
                                :view-height height})))
 
 (reg-event-x
  ::view-layer
  (fn [db layer-idx]
-   (assoc-in db [:solitare :view-layer] layer-idx)))
+   (assoc-in db [:solitaire :view-layer] layer-idx)))
 
 (reg-event-x
  ::symmetry
  (fn [db val]
-   {:db (assoc-in db [:solitare :symmetry] val)
+   {:db (assoc-in db [:solitaire :symmetry] val)
     :dispatch [::generate-board]}))
 
 (reg-event-x
  ::max-layers
  (fn [db val]
-   {:db (assoc-in db [:solitare :max-layers] val)
+   {:db (assoc-in db [:solitaire :max-layers] val)
     :dispatch [::generate-board]}))
 
 (reg-event-x
  ::num-tiles
  (fn [db val]
-   {:db (assoc-in db [:solitare :num-tiles] val)
+   {:db (assoc-in db [:solitaire :num-tiles] val)
     :dispatch [::generate-board]}))

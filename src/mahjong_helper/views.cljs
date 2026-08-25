@@ -591,7 +591,7 @@
                       :border :none}
               :on-click #(dispatch [:close-reset-modal])}
      "Cancel"]
-    [:button {:on-click #(dispatch [:initialize-db (read-storage true)])}
+    [:button {:on-click #(dispatch [:reset-game (read-storage true)])}
      "Yes, Reset"]]])
 
 (defn settings-modal []
@@ -714,9 +714,8 @@
           [Menu-Btn]
           "MAHJONG HELPER"
           [:div.title-right
-           [:button {:style {:font-size "0.8rem"
-                             :background "rgb(243, 142, 26)"}
-                     :on-click #(dispatch [:open-settings-modal])}
+           [:button.btn-orange {:style {:font-size "0.8rem"}
+                                :on-click #(dispatch [:open-settings-modal])}
             "Settings"]
            [:button.clear-btn {:on-click #(dispatch [:open-reset-modal])}
             "Reset"]]]]
@@ -725,11 +724,11 @@
         (when @(subscribe [:hand-complete?])
           [:<>
            [:div.charleston
-            [:button.arrow-btn {:on-click #(dispatch [:open-charleston-modal])}
+            [:button.btn-orange.arrow-btn {:on-click #(dispatch [:open-charleston-modal])}
              "Charleston"]]
            
            [:div.meld
-            [:button.arrow-btn {:on-click #(dispatch [:open-meld-modal])}
+            [:button.btn-purple.arrow-btn {:on-click #(dispatch [:open-meld-modal])}
              "Meld"]]])
         [results-view]
         [:div {:style {:visibility :hidden}}
