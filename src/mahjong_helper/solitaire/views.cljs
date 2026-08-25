@@ -97,6 +97,13 @@
                    (not (get-in tiles-on-edge [x y]))))
          coord-pairs->layer-map)))
 
+(defn count-tiles-in-board
+  [board]
+  (->> board
+       vals
+       (map #(-> % layer-map->coord-pairs count))
+       (apply +)))
+
 (defn remove-empty-layers 
   [board]
   (->> board
@@ -134,10 +141,7 @@
                         (assoc board idx (generate-upper-layer (get board (dec idx)))))
                       {0 base-layer'}
                       (range 1 max-layers))]
-    (if (>= (->> board
-                 vals
-                 (map #(-> % layer-map->coord-pairs count))
-                 (apply +)) num-tiles)
+    (if (>= (count-tiles-in-board board) num-tiles)
       ;; all done!
       (->> board
            remove-empty-layers
@@ -147,21 +151,32 @@
                                  tiles-on-edge
                                  desymmetricalize
                                  layer-map->coord-pairs)
-            rand-edge-tile-coord (rand-nth edge-tile-coords)
-            adjacents (->> rand-edge-tile-coord
-                           adjacents-to-coord
-                           (filter (fn [[x y]]
-                                     (and (not (get-in base-layer [x y])) ;; cannot be an already existing tile
-                                          (if (= symmetry 2)
-                                            ;; in 2-symmetry mode, must be in quadrants I or IV
-                                            (>= x 0)
-                                            ;; in 4-symmetry mode, must be in quadrant I
-                                            (and (>= x 0)
-                                                 (>= y 0)))))))
-            [rand-adjacent-x rand-adjacent-y] (rand-nth adjacents)]
-        (-> args
-            (assoc-in [:base-layer rand-adjacent-x rand-adjacent-y] true)
-            generate-board)))))
+            !adjacents (atom [])]
+        (while (empty? @!adjacents)
+          ;; no valid adjacents found (or not done yet), choose a different random edge tile
+          (reset! !adjacents (->> edge-tile-coords
+                                  rand-nth
+                                  adjacents-to-coord
+                                  (filter (fn [[x y]]
+                                            (let [base-layer'' (-> base-layer
+                                                                   (assoc-in [x y] true)
+                                                                   (symmetricalize symmetry))
+                                                  board-with-adjacent (reduce (fn [board idx]
+                                                                                (assoc board idx (generate-upper-layer (get board (dec idx)))))
+                                                                              {0 base-layer''}
+                                                                              (range 1 max-layers))]
+                                              (and (not (get-in base-layer [x y])) ;; cannot be an already existing tile
+                                                   (<= (count-tiles-in-board board-with-adjacent) num-tiles) ;; if this tile would put the total # of tiles over num-tiles, skip it
+                                                   (if (= symmetry 2)
+                                                     ;; in 2-symmetry mode, must be in quadrants I or IV
+                                                     (>= x 0)
+                                                     ;; in 4-symmetry mode, must be in quadrant I
+                                                     (and (>= x 0)
+                                                          (>= y 0))))))))))
+        (let [[rand-adjacent-x rand-adjacent-y] (rand-nth @!adjacents)]
+          (-> args
+              (assoc-in [:base-layer rand-adjacent-x rand-adjacent-y] true)
+              generate-board))))))
 
 (def TILE_WIDTH 30)
 (def TILE_HEIGHT 40)
