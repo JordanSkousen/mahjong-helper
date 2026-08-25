@@ -1,31 +1,5 @@
 (ns mahjong-helper.utils)
 
-(defn read-storage [& [ignore-last-state?]] 
-  (let [last-state-time (-> "last-state-time"
-                            js/window.localStorage.getItem
-                            long
-                            js/Date.)
-        use-last-state? (and (not ignore-last-state?)
-                             (<= (- (js/Date.) last-state-time) (* 15 60 1000)))  ;; last state expires after 15 mins
-        last-state (when use-last-state?
-                     (-> "last-state"
-                         js/window.localStorage.getItem
-                         js/JSON.parse
-                         (js->clj :keywordize-keys true)))
-        use-last-state?' (some? (:hand last-state))]
-    {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))
-     :hand (if (>= (count (keys (:hand last-state))) 13)
-             (->> last-state
-                  :hand
-                  (map (fn [[key val]]
-                         [(-> key name int) val]))
-                  (into {}))
-             (zipmap (range (if (:starting-player? last-state) 14 13))
-                     (repeat {})))
-     :starting-player? (:starting-player? last-state)
-     :editing (get last-state :editing 0)
-     :starting-modal-open? (not use-last-state?')}))
-
 (def suitless? #{"F" "N" "E" "W" "S" "J"})
 
 (defn tile-complete? 
@@ -51,3 +25,39 @@
   (if (string? val)
     (= val "J")
     (= (:value val) "J")))
+
+(defn read-storage [& [ignore-last-state?]]
+  (let [last-state-time (-> "last-state-time"
+                            js/window.localStorage.getItem
+                            long
+                            js/Date.)
+        use-last-state? (and (not ignore-last-state?)
+                             (<= (- (js/Date.) last-state-time) (* 15 60 1000)))  ;; last state expires after 15 mins
+        last-state (when use-last-state?
+                     (-> "last-state"
+                         js/window.localStorage.getItem
+                         js/JSON.parse
+                         (js->clj :keywordize-keys true)))
+        use-last-state?' (->> last-state
+                              :hand
+                              vals
+                              (filter seq)
+                              seq)
+        hand' (->> last-state
+                   :hand
+                   (map (fn [[key val]]
+                          [(-> key name int) val]))
+                   (into {}))]
+    {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))
+     :hand (if (>= (count (keys (:hand last-state))) 13)
+             hand'
+             (zipmap (range (if (:starting-player? last-state) 14 13))
+                     (repeat {})))
+     :starting-player? (:starting-player? last-state)
+     :editing (->> hand' ;; select first non-complete tile
+                   (sort-by first)
+                   (filter (fn [[_ val]]
+                             (not (tile-complete? val))))
+                   first
+                   key)
+     :starting-modal-open? (not use-last-state?')}))

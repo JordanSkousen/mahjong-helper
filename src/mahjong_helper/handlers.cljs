@@ -208,7 +208,7 @@
   :id :save-last-state
   :after (fn [{{:keys [db]} :effects :as context}]
            (cond-> context
-             db (assoc-in [:effects ::save-last-state] (select-keys db [:hand :starting-player? :editing]))))))
+             db (assoc-in [:effects ::save-last-state] (select-keys db [:hand :starting-player?]))))))
 
 (reg-fx
  ::save-last-state
