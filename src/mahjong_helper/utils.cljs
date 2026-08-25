@@ -54,10 +54,11 @@
              (zipmap (range (if (:starting-player? last-state) 14 13))
                      (repeat {})))
      :starting-player? (:starting-player? last-state)
-     :editing (->> hand' ;; select first non-complete tile
-                   (sort-by first)
-                   (filter (fn [[_ val]]
-                             (not (tile-complete? val))))
-                   first
-                   key)
+     :editing (or (->> hand' ;; select first non-complete tile
+                       (sort-by first)
+                       (filter (fn [[_ val]]
+                                 (not (tile-complete? val))))
+                       first
+                       first)
+                  0)
      :starting-modal-open? (not use-last-state?')}))
