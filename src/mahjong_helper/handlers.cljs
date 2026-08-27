@@ -169,7 +169,9 @@
  :reset-game
  (fn [db]
    (-> db
-       (dissoc :hand :editing :starting-player? :reset-modal-open?)
+       (dissoc :editing :starting-player? :reset-modal-open?)
+       (assoc :hand (zipmap (range 0 13)
+                            (repeat {})))
        (assoc :starting-modal-open? true))))
 
 (reg-event-x
