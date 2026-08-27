@@ -604,7 +604,7 @@
                   :text-align :center
                   :color "gray"
                   :margin-top 20}}
-    "2026-08-09"]
+    "2026-08-26"]
    [:button {:on-click #(dispatch [:close-settings-modal])}
     "Close"]])
 
