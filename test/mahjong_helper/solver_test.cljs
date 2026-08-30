@@ -200,3 +200,22 @@
             (str "expected the meld's 2B triple at indices 2-4, got: " assignment))
         (is (every? #(= "5B" %) (subvec assignment 10 14))
             (str "expected the meld's 5B quad at indices 10-14, got: " assignment))))))
+
+(deftest closed-pattern-is-blocked-by-any-meld
+  (testing "a :closed? pattern requires a fully concealed hand — melding
+            even a single tile disqualifies it outright, regardless of
+            whether that meld would otherwise fit one of its groups"
+    (let [pattern "1ra2sa3ta1rb2sb3tb2uc" ;; :closed? true in const.cljs
+          ;; a pair fits this pattern's mult-2 groups (2sa/2sb/2uc)
+          ;; perfectly on its own — proves the block is about
+          ;; closedness, not about the meld failing to match anything
+          melds [["6B" "6B"]]]
+      (is (= 0 (solver/rank-pattern pattern [] melds)))
+      (is (empty? (solver/find-arrangements pattern [] melds))))))
+
+(deftest closed-pattern-still-works-with-no-melds
+  (testing "a :closed? pattern is only blocked when something is
+            actually melded — an empty meld list doesn't trip it"
+    (let [pattern "1ra2sa3ta1rb2sb3tb2uc"
+          hand ["6B" "6B" "7B" "7B" "7B" "8B" "8B" "8B" "6C" "6C" "7C" "7C" "7C"]]
+      (is (pos? (solver/rank-pattern pattern hand []))))))
