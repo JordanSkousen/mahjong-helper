@@ -1,6 +1,6 @@
 (ns mahjong-helper.solver
   (:require [clojure.string :as string]
-            [mahjong-helper.const :refer [patterns WILDS1 WILDS2 ALL_WILDS]]
+            [mahjong-helper.const :refer [suits patterns WILDS1 WILDS2 ALL_WILDS]]
             [mahjong-helper.utils :refer [number?* joker? dragon?]]))
 
 (defn pv-wild-num?
@@ -169,13 +169,27 @@
 (defn resolve-group-str
   "Given a resolved DFS context and a pattern group, the concrete 2-char
    tile string it requires (e.g. \"7B\"), or nil if the group's wild
-   number or suit letter hasn't been pinned down by this context."
+   number or suit letter hasn't been pinned down by this context.
+
+   If the group's own suit letter was never bound (no tile ever matched
+   it) but the *other* suit letters already claim 2 of the 3 real
+   suits, the third is inferred — different letters must resolve to
+   different suits, so with only one real suit left unclaimed, it's the
+   only value this letter could possibly take."
   [context group]
   (let [[_ val suit] group
         val' (if (or (pv-wild-num? val) (pv-wild-num2? val))
                (get context val)
                val)
-        suit' (if (= suit ".") "." (get context suit))]
+        bound-suit (get context suit)
+        other-suits (->> ["a" "b" "c"]
+                         (remove #{suit})
+                         (keep #(get context %))
+                         set)
+        suit' (cond
+                (= suit ".") "."
+                bound-suit bound-suit
+                (= 2 (count other-suits)) (first (remove other-suits (set (keys suits)))))]
     (when (and val' suit')
       (str val' suit'))))
 

@@ -171,8 +171,10 @@
       [:span.material-symbols-outlined "chevron_forward"]]]))
 
 (defn group-glyph
-  "Renders one unit of a pattern group's placeholder icon/character (e.g.
-   for wild letter \"r\" the digit \"1\", for \"D\" the dragon icon, etc)."
+  "Renders one unit of a pattern group's abstract placeholder icon/character
+   (e.g. for wild letter \"r\" the digit \"1\" in the traditional theme or
+   the letter \"A\" otherwise, for \"D\" the dragon icon, etc) — used for
+   the generic pattern shape, not a resolved concrete tile."
   [val color]
   (let [traditional-theme? @(subscribe [:traditional-theme?])]
     (if traditional-theme?
@@ -208,7 +210,10 @@
                           :margin-right "3px"}}
            (gstring/unescapeEntities "&nbsp;")])
 
-        ;; WILDS1 sequential letter
+        ;; WILDS1 sequential letter — abstract placeholder A/B/C/... for
+        ;; whichever wild position this is (r->A, s->B, ...), used by the
+        ;; generic pattern display (e.g. "1ra2sa3ta..." renders as
+        ;; "A BB CCC ..."), not a resolved digit
         (string/includes? WILDS1 val)
         (js/String.fromCharCode (- (.charCodeAt val 0) 49))
 
@@ -315,9 +320,9 @@
    actual tile, unfilled ones show what's needed (or a generic placeholder
    if this arrangement hasn't pinned down which suit/wild number is needed)."
   [pattern {:keys [context assignment]}]
-  [:div.arrangement-view {:style {:display "flex" :flex-wrap "wrap" :gap "3px" :margin "10px 0"}}
+  [:div.arrangement-view {:style {:display "flex" :flex-wrap "wrap" :gap "3px" :margin "10px 0"}} 
    (doall
-    (for [{:keys [group tiles]} (groups-with-slots pattern assignment)]
+    (for [{:keys [group tiles]} (groups-with-slots pattern assignment)] 
       ^{:key group}
       [:div {:style {:display "flex" :gap "3px"}}
        (doall

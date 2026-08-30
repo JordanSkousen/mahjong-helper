@@ -110,3 +110,27 @@
     (let [hand ["5B" "5B" "5B" "5B" "5C" "5C" "5C" "5C"]
           pattern "4ra4sb"]
       (is (= 2 (count (solver/find-arrangements pattern hand)))))))
+
+(deftest sole-remaining-suit-is-inferred-for-display
+  (testing "regression: when a pattern's other suit letters already claim
+            2 of the 3 real suits, an unbound third letter's suit is
+            inferrable — different letters must be different suits, so
+            with only Dot left unclaimed, that's the only value \"c\"
+            could take, even though no actual Dot tile confirmed it"
+    (let [hand ["2D" "4D" "DD" "3C" "4C" "5C" "6C" "7C" "5B" "6B" "7B" "N." "S."]
+          pattern "1ra2sa3ta1rb2sb3tb2uc"
+          {:keys [context]} (first (solver/find-arrangements pattern hand))
+          groups (solver/pattern-groups pattern)
+          uc-group (first (filter #(= "c" (subs % 2 3)) groups))]
+      (is (= "8D" (solver/resolve-group-str context uc-group))
+          (str "context: " context ", group: " uc-group)))))
+
+(deftest suit-is-not-inferred-with-two-unclaimed-suits-remaining
+  (testing "no inference when only 1 of the 3 real suits is claimed
+            elsewhere — the third letter's suit is genuinely still
+            ambiguous between the other two"
+    ;; val (\"u\") is resolvable on its own, isolating that it's
+    ;; specifically the suit inference (not a missing value) that's
+    ;; correctly withheld here
+    (let [context {"a" "B" "u" "8"}]
+      (is (nil? (solver/resolve-group-str context "2uc"))))))
