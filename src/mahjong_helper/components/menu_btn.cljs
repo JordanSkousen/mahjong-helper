@@ -1,4 +1,4 @@
-(ns mahjong-helper.views.menu-btn
+(ns mahjong-helper.components.menu-btn
   (:require ["@mui/material/Menu" :default Menu]
             ["@mui/material/MenuItem" :default MenuItem]
             [re-re-frame.core :refer [subscribe dispatch]]

@@ -3,7 +3,7 @@
             ["@mui/material/Stack" :default Stack]
             ["@mui/material/Slider" :default Slider]
             ["@mui/material/styles" :refer [styled]]
-            [mahjong-helper.views.menu-btn :refer [Menu-Btn]]
+            [mahjong-helper.components.menu-btn :refer [Menu-Btn]]
             [re-re-frame.core :refer [reg-event-x reg-grab grab subscribe dispatch]]
             [reagent.core :as r]))
 

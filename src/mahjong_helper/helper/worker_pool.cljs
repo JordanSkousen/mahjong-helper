@@ -1,7 +1,7 @@
-(ns mahjong-helper.worker-pool
+(ns mahjong-helper.helper.worker-pool
   (:require [mahjong-helper.const :refer [patterns]]))
 
-(def num-workers 4)
+(defonce NUM_WORKERS 4)
 
 (defn- js-obj->str-map
   "Converts a flat, string-keyed JS object to a CLJS map WITHOUT using
@@ -48,7 +48,7 @@
           (js->clj (js/Object.keys js-results))))
 
 (defonce ^:private workers
-  (mapv (fn [_] (js/Worker. "/js/worker.js")) (range num-workers)))
+  (mapv (fn [_] (js/Worker. "/js/worker.js")) (range NUM_WORKERS)))
 
 (defonce ^:private request-id (atom 0))
 
@@ -69,7 +69,7 @@
   [hand melds on-result]
   (let [id (swap! request-id inc)
         pattern-keys (vec (keys patterns))
-        chunk-size (js/Math.ceil (/ (count pattern-keys) num-workers))
+        chunk-size (js/Math.ceil (/ (count pattern-keys) NUM_WORKERS))
         chunks (partition-all chunk-size pattern-keys)
         received (atom {})]
     (doseq [[worker chunk] (map vector workers chunks)]

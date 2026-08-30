@@ -1,5 +1,5 @@
-(ns mahjong-helper.worker
-  (:require [mahjong-helper.solver :refer [find-arrangements]]))
+(ns mahjong-helper.helper.worker
+  (:require [mahjong-helper.helper.solver :refer [find-arrangements]]))
 
 (defn- rank-chunk
   "For each pattern, the best-arrangement is computed once and the

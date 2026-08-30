@@ -1,4 +1,4 @@
-(ns mahjong-helper.modal)
+(ns mahjong-helper.components.modal)
 
 (defn Modal
   [{:keys [open? title closable? on-close]} & children]

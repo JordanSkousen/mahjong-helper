@@ -1,4 +1,4 @@
-(ns mahjong-helper.solver
+(ns mahjong-helper.helper.solver
   (:require [clojure.string :as string]
             [mahjong-helper.const :refer [suits patterns WILDS1 WILDS2 ALL_WILDS]]
             [mahjong-helper.utils :refer [number?* joker? dragon?]]))

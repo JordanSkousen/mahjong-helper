@@ -1,6 +1,6 @@
 (ns mahjong-helper.solver-test
   (:require [cljs.test :refer [deftest is testing]]
-            [mahjong-helper.solver :as solver]))
+            [mahjong-helper.helper.solver :as solver]))
 
 (deftest different-letters-require-different-real-suits
   (testing "a distinct pattern letter can never resolve to a suit another letter already claimed"

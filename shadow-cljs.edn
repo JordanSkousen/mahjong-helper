@@ -19,8 +19,8 @@
                                          :compiler-options {:closure-defines {re-frame.trace.trace-enabled?        false
                                                                               day8.re-frame.tracing/trace-enabled? false}}}}
             :worker  {:target           :browser
-                      :modules          {:worker {:entries [mahjong-helper.worker]
-                                                  :init-fn mahjong-helper.worker/init
+                      :modules          {:worker {:entries [mahjong-helper.helper.worker]
+                                                  :init-fn mahjong-helper.helper.worker/init
                                                   :web-worker true}}
                       :output-dir       "public/js"
                       :asset-path       "/js"

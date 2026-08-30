@@ -1,6 +1,6 @@
 (ns mahjong-helper.worker-pool-test
   (:require [cljs.test :refer [deftest is testing]]
-            [mahjong-helper.solver :as solver]
+            [mahjong-helper.helper.solver :as solver]
             [mahjong-helper.const :refer [patterns]]))
 
 ;; Mirrors mahjong-helper.worker/rank-chunk and mahjong-helper.worker-pool's
