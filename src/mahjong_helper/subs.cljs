@@ -26,9 +26,14 @@
 (reg-grab
  :hand-as-strs
  (fn [db]
-   (->> (grab db :hand)
-        vals
-        (map tile-map->str))))
+   ;; excludes melded tiles — those are fixed, already-exposed sets
+   ;; passed to the solver separately (see :meld-groups-as-strs), not
+   ;; part of the free pool it searches over
+   (let [melded (set (grab db :melded-tile-idxs))]
+     (->> (grab db :hand)
+          (remove (fn [[idx _]] (contains? melded idx)))
+          vals
+          (map tile-map->str)))))
 
 (reg-grab
  :num-completed-tiles
@@ -122,9 +127,42 @@
 (reg-grab
  :meld-modal-groups
  (fn [db]
-   (get-in db [:meld-modal :groups])))
+   (-> db
+       (get-in [:meld-modal :groups])
+       (update-vals (fn [group]
+                      (let [group' (cond-> group
+                                     (>= (->> group
+                                              vals
+                                              (filter some?)
+                                              count) 3) ;; group has 3+ tiles filled, add an empty zone at the end
+                                     (assoc (count (keys group)) nil))] 
+                        (merge {0 nil
+                                1 nil
+                                2 nil} ;; there must always be at least 3 zones visible
+                               group')))))))
 
 (reg-grab
  :meld-modal-show-invalid?
  (fn [db]
    (get-in db [:meld-modal :show-invalid?])))
+
+(reg-grab
+ :meld-groups
+ (fn [db]
+   (:meld-groups db)))
+
+(reg-grab
+ :melded-tile-idxs
+ (fn [db]
+   (apply concat (vals (grab db :meld-groups)))))
+
+(reg-grab
+ :meld-groups-as-strs
+ (fn [db]
+   ;; each meld group as a vec of tile strings, e.g. ["2B" "2B" "2B"] —
+   ;; the shape mahjong-helper.solver/rank-pattern & find-arrangements
+   ;; expect for their `melds` argument
+   (let [hand (grab db :hand)]
+     (->> (grab db :meld-groups)
+          vals
+          (mapv (fn [idxs] (mapv #(tile-map->str (get hand %)) idxs)))))))

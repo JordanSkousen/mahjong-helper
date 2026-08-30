@@ -117,25 +117,81 @@
   [v i]
   (into (subvec v 0 i) (subvec v (inc i))))
 
-(defn rank-pattern
-  "Max number of tiles from hand that can fill pattern's slots under one
-   consistent context (wild numbers + suit letters). Backtracking with
-   branch & bound. Within a run of identical slots, tiles are taken in
-   sorted order and a skip jumps the whole run, so interchangeable
-   assignments aren't re-explored."
-  [pattern hand]
-  (let [slots (pattern-slots pattern)
-        n-slots (count slots)
-        best (atom 0)]
-    (letfn [(dfs [slot-i tiles min-i context matched]
+(defn groups-with-ranges
+  "[{:group group-text :start i :end j}] for each literal 3-char group in
+   `pattern` (parens stripped), in pattern order, giving the slot index
+   range (into (pattern-slots pattern)) it occupies."
+  [pattern]
+  (first
+   (reduce (fn [[acc i] group]
+             (let [[mul] group mul (int mul)]
+               [(conj acc {:group group :start i :end (+ i mul)}) (+ i mul)]))
+           [[] 0]
+           (pattern-groups (string/replace pattern #"[()]" "")))))
+
+(defn- try-match-meld
+  "Threads a meld's tiles through tile-matches-pattern-group against
+   `group`, in order, accumulating context. Returns the final context if
+   every tile matches, else nil."
+  [context group meld]
+  (reduce (fn [ctx tile]
+            (let [{:keys [result context]} (tile-matches-pattern-group ctx group tile)]
+              (if result context (reduced nil))))
+          context
+          meld))
+
+(defn- meld-assignments
+  "All valid ways to assign every meld in `melds` (each a vector of tile
+   strings, e.g. [\"2B\" \"2B\" \"2B\"]) to a distinct pattern-group
+   occurrence with matching mult, under one mutually consistent context.
+   A meld is a fixed, already-exposed set of tiles: it can only satisfy
+   a group requiring *exactly* that many tiles, and once assigned, no
+   other meld or hand tile can touch those slots — this is what makes a
+   pattern permanently impossible when a meld doesn't fit it anywhere,
+   regardless of what's still in hand.
+
+   Returns a seq of {:context ctx :assignment {slot-idx tile-str, ...}}.
+   With no melds, this is just [{:context {:pattern pattern} :assignment
+   {}}] — the trivial no-op start every hand-only match already used.
+   Empty altogether (not even the trivial case) if the melds can't all
+   simultaneously fit."
+  [pattern melds]
+  (let [ranges (groups-with-ranges pattern)]
+    (letfn [(search [remaining ranges context assignment]
+              (if (empty? remaining)
+                [{:context context :assignment assignment}]
+                (let [meld (sort (first remaining))
+                      mult (count meld)]
+                  (mapcat (fn [{:keys [group start end] :as candidate}]
+                            (when (= (- end start) mult)
+                              (when-let [context' (try-match-meld context group meld)]
+                                (search (rest remaining)
+                                        (remove #{candidate} ranges)
+                                        context'
+                                        (into assignment (map vector (range start end) meld))))))
+                          ranges))))]
+      (search (vec melds) ranges {:pattern pattern} {}))))
+
+(defn- fill-remaining-max
+  "Backtracking search filling `remaining-idxs` (positions into `slots`)
+   using `tiles` (already sorted), starting from context/matched.
+   Returns the best total matched count achievable — never lower than
+   the starting `matched`, since that's already a valid outcome (fill
+   nothing further). Same branch & bound / duplicate-run-skip as before,
+   just over an arbitrary subset of slots instead of always 0..n-1, so
+   melds can pre-claim some of them before the hand tiles are tried."
+  [slots remaining-idxs tiles context matched]
+  (let [n (count remaining-idxs)
+        best (atom matched)]
+    (letfn [(dfs [pos tiles min-i context matched]
               (swap! best max matched)
-              (when (and (< slot-i n-slots)
+              (when (and (< pos n)
                          (seq tiles)
-                         (> (+ matched (min (- n-slots slot-i) (count tiles)))
-                            @best))
-                (let [slot (slots slot-i)
-                      same-next? (and (< (inc slot-i) n-slots)
-                                      (= slot (slots (inc slot-i))))]
+                         (> (+ matched (min (- n pos) (count tiles))) @best))
+                (let [slot-idx (remaining-idxs pos)
+                      slot (slots slot-idx)
+                      same-next? (and (< (inc pos) n)
+                                      (= slot (slots (remaining-idxs (inc pos)))))]
                   (doseq [i (range min-i (count tiles))
                           ;; only the first of a run of duplicate tiles
                           :when (or (= i min-i)
@@ -143,28 +199,51 @@
                     (let [{:keys [result context]}
                           (tile-matches-pattern-group context slot (tiles i))]
                       (when result
-                        (dfs (inc slot-i)
+                        (dfs (inc pos)
                              (vec-remove tiles i)
                              (if same-next? i 0)
                              context
                              (inc matched)))))
                   ;; leave this run of identical slots unfilled
-                  (let [run-end (loop [j (inc slot-i)]
-                                  (if (and (< j n-slots) (= slot (slots j)))
+                  (let [run-end (loop [j (inc pos)]
+                                  (if (and (< j n) (= slot (slots (remaining-idxs j))))
                                     (recur (inc j))
                                     j))]
                     (dfs run-end tiles 0 context matched)))))]
-      (dfs 0 (vec (sort hand)) 0 {:pattern pattern} 0)
+      (dfs 0 tiles 0 context matched)
       @best)))
+
+(defn rank-pattern
+  "Max number of tiles from hand (plus any melds — fixed, already-exposed
+   sets that must each occupy a whole matching-mult pattern group) that
+   can fill pattern's slots under one consistent context. 0 if the melds
+   can't all fit this pattern at all, regardless of hand: an exposed
+   meld can't be taken back, so a pattern it doesn't fit is permanently
+   unreachable, not just currently unmatched."
+  ([pattern hand] (rank-pattern pattern hand []))
+  ([pattern hand melds]
+   (let [slots (pattern-slots pattern)
+         n-slots (count slots)
+         starts (meld-assignments pattern melds)]
+     (if (empty? starts)
+       0
+       (apply max
+              (for [{:keys [context assignment]} starts]
+                (fill-remaining-max slots
+                                    (vec (remove (set (keys assignment)) (range n-slots)))
+                                    (vec (sort hand))
+                                    context
+                                    (count assignment))))))))
 
 (defn rank-patterns
   "hand is a vec of tile strings like [\"5B\" \"DC\" \"N\" \"J\" \"F\"].
    Returns {pattern ranking}; a higher ranking means the hand is closer
    to that mahjong (ranking = tiles already in place)."
-  [hand]
-  (into {}
-        (map (fn [pattern] [pattern (rank-pattern pattern hand)]))
-        (keys patterns)))
+  ([hand] (rank-patterns hand []))
+  ([hand melds]
+   (into {}
+         (map (fn [pattern] [pattern (rank-pattern pattern hand melds)]))
+         (keys patterns))))
 
 (defn resolve-group-str
   "Given a resolved DFS context and a pattern group, the concrete 2-char
@@ -408,53 +487,73 @@
 (def ^:private max-arrangements 24)
 
 (defn find-arrangements
-  "All maximal ways (tied for `pattern`'s top ranking against `hand`) to
-   match its slots to hand tiles. Each result is {:context ctx :assignment
-   [tile-str-or-nil ...]}, assignment parallel to (pattern-slots pattern).
-   Uses the same search as rank-pattern, just recording every terminal
-   state instead of only the best count. Capped at max-arrangements to
-   avoid combinatorial blowup on very flexible patterns."
+  "All maximal ways (tied for `pattern`'s top ranking against `hand` plus
+   any `melds` — see rank-pattern) to match its slots to hand tiles.
+   Each result is {:context ctx :assignment [tile-str-or-nil ...]},
+   assignment parallel to (pattern-slots pattern). Uses the same search
+   as rank-pattern, just recording every terminal state instead of only
+   the best count. Capped at max-arrangements to avoid combinatorial
+   blowup on very flexible patterns. Empty if the melds can't all fit
+   this pattern at all."
   ([pattern hand]
-   (find-arrangements pattern hand max-arrangements))
-  ([pattern hand max-arrangements]
+   (find-arrangements pattern hand [] max-arrangements))
+  ([pattern hand melds]
+   (find-arrangements pattern hand melds max-arrangements))
+  ([pattern hand melds max-arrangements]
    (let [slots (pattern-slots pattern)
          n-slots (count slots)
-         best (rank-pattern pattern hand)
+         hand (vec (sort hand))
+         starts (for [{:keys [context assignment]} (meld-assignments pattern melds)
+                     :let [claimed (set (keys assignment))]]
+                  {:context context
+                   :matched (count assignment)
+                   :assignment (reduce (fn [v [idx tile]] (assoc v idx tile))
+                                       (vec (repeat n-slots nil))
+                                       assignment)
+                   :remaining-idxs (vec (remove claimed (range n-slots)))})
+         best (if (empty? starts)
+                0
+                (apply max
+                       (for [{:keys [context matched remaining-idxs]} starts]
+                         (fill-remaining-max slots remaining-idxs hand context matched))))
          results (atom #{})]
-     (letfn [(dfs [slot-i tiles min-i context matched assignment]
-               (when (< (count @results) max-arrangements)
-                 (if (or (>= slot-i n-slots) (empty? tiles))
-                   (when (= matched best)
-                     (swap! results conj {:context (dissoc context :pattern)
-                                          :assignment assignment}))
-                   (when (>= (+ matched (min (- n-slots slot-i) (count tiles))) best)
-                     (let [slot (slots slot-i)
-                           same-next? (and (< (inc slot-i) n-slots)
-                                           (= slot (slots (inc slot-i))))]
-                       (doseq [i (range min-i (count tiles))
-                               :when (or (= i min-i)
-                                         (not= (tiles i) (tiles (dec i))))]
-                         (let [{:keys [result context]}
-                               (tile-matches-pattern-group context slot (tiles i))]
-                           (when result
-                             (dfs (inc slot-i)
-                                  (vec-remove tiles i)
-                                  (if same-next? i 0)
-                                  context
-                                  (inc matched)
-                                  (assoc assignment slot-i (tiles i))))))
-                       (let [run-end (loop [j (inc slot-i)]
-                                       (if (and (< j n-slots) (= slot (slots j)))
-                                         (recur (inc j))
-                                         j))]
-                         (dfs run-end tiles 0 context matched assignment)))))))]
-       (dfs 0 (vec (sort hand)) 0 {:pattern pattern} 0 (vec (repeat n-slots nil)))
-       (->> @results
-            (sort-by (comp pr-str :assignment))
-            (reduce (fn [{:keys [seen out]} arrangement]
-                      (let [canonical (canonicalize-arrangement pattern arrangement)]
-                        (if (contains? seen canonical)
-                          {:seen seen :out out}
-                          {:seen (conj seen canonical) :out (conj out arrangement)})))
-                    {:seen #{} :out []})
-            :out)))))
+     (doseq [{:keys [context matched assignment remaining-idxs]} starts
+             :let [n-remaining (count remaining-idxs)]]
+       (letfn [(dfs [pos tiles min-i context matched assignment]
+                 (when (< (count @results) max-arrangements)
+                   (if (or (>= pos n-remaining) (empty? tiles))
+                     (when (= matched best)
+                       (swap! results conj {:context (dissoc context :pattern)
+                                            :assignment assignment}))
+                     (when (>= (+ matched (min (- n-remaining pos) (count tiles))) best)
+                       (let [slot-idx (remaining-idxs pos)
+                             slot (slots slot-idx)
+                             same-next? (and (< (inc pos) n-remaining)
+                                             (= slot (slots (remaining-idxs (inc pos)))))]
+                         (doseq [i (range min-i (count tiles))
+                                 :when (or (= i min-i)
+                                           (not= (tiles i) (tiles (dec i))))]
+                           (let [{:keys [result context]}
+                                 (tile-matches-pattern-group context slot (tiles i))]
+                             (when result
+                               (dfs (inc pos)
+                                    (vec-remove tiles i)
+                                    (if same-next? i 0)
+                                    context
+                                    (inc matched)
+                                    (assoc assignment slot-idx (tiles i))))))
+                         (let [run-end (loop [j (inc pos)]
+                                         (if (and (< j n-remaining) (= slot (slots (remaining-idxs j))))
+                                           (recur (inc j))
+                                           j))]
+                           (dfs run-end tiles 0 context matched assignment)))))))]
+         (dfs 0 hand 0 context matched assignment)))
+     (->> @results
+          (sort-by (comp pr-str :assignment))
+          (reduce (fn [{:keys [seen out]} arrangement]
+                    (let [canonical (canonicalize-arrangement pattern arrangement)]
+                      (if (contains? seen canonical)
+                        {:seen seen :out out}
+                        {:seen (conj seen canonical) :out (conj out arrangement)})))
+                  {:seen #{} :out []})
+          :out))))

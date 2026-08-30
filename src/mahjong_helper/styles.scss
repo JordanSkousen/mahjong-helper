@@ -3,14 +3,15 @@
 body {
   font-family: "Oswald", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
-
 code {
   font-family: 'Azeret Mono', monospace;
 }
-
 a {
   color: rgb(0, 166, 255);
   text-decoration: underline;
+}
+button {
+  outline: none;
 }
 
 .menu-btn {
@@ -211,33 +212,45 @@ $purple: rgb(132, 20, 207);
 }
 .melded-tile {
   position: relative;
-}
-.melded-tile::before {
-  content: "";
-  background: none;
-  border: 4px solid $purple;
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  border-radius: $tile-border-radius;
-}
-.melded-tile::after {
-  content: "M";
-  font-size: 10px;
-  background: $purple;
-  display: block;
-  position: absolute;
-  right: 0;
-  top: 0;
-  pointer-events: none;
-  border-radius: $tile-border-radius;
-  width: 15px;
-  height: 15px;
-  color: white !important;
+  &::before {
+    content: "";
+    background: none;
+    border: 4px solid $purple;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    border-radius: $tile-border-radius;
+  }
+  &::after {
+    content: "M";
+    font-size: 10px;
+    background: $purple;
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    pointer-events: none;
+    border-radius: $tile-border-radius;
+    width: 15px;
+    height: 15px;
+    color: white !important;
+    text-align: center;
+  }
+  &.tile-face {
+    &::before {
+      border-width: 2px;
+    }
+    &::after {
+      font-size: 7px;
+      line-height: 8px;
+      width: 10px;
+      height: 10px;
+    }
+  }
 }
 
 .pattern {

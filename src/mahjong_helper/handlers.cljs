@@ -24,7 +24,7 @@
 ;; - if tile is "complete", clear it first
 ;; - if tile has a suit and we're keying a suitless value, clear it
 ;; - assoc value/suit
-;; - if tile is now "complete", advance to next tile (or stop editing if idx = 12/13)
+;; - if tile is now "complete", advance to next non-melded tile (or stop editing if idx = 12/13)
 
 (reg-event-x
  :key-value
@@ -80,12 +80,17 @@
  (fn [db]
    (let [hand-size (grab db :hand-size)
          idx (grab db :editing-idx)
-         {:keys [value suit]} (grab db :editing)]
+         {:keys [value suit]} (grab db :editing)
+         melded-tile-idxs (grab db :melded-tile-idxs)
+         non-melded-idxs (remove (set melded-tile-idxs) (set (range hand-size)))
+         prev-non-melded-idx (->> non-melded-idxs
+                                  (filter #(< % idx))
+                                  (apply max))]
      (cond
        suit (update-in db [:hand idx] dissoc :suit)
        value (update-in db [:hand idx] dissoc :value)
-       (> idx 0) (update db :editing dec)
-       (= idx 0) (assoc db :editing (dec hand-size))))))
+       prev-non-melded-idx (assoc db :editing prev-non-melded-idx)
+       (not prev-non-melded-idx) (assoc db :editing (apply max non-melded-idxs))))))
 
 (reg-event-x
  :edit-tile
@@ -169,7 +174,7 @@
  :reset-game
  (fn [db]
    (-> db
-       (dissoc :editing :starting-player? :reset-modal-open?)
+       (dissoc :editing :meld-groups :starting-player? :reset-modal-open?)
        (assoc :hand (zipmap (range 0 13)
                             (repeat {})))
        (assoc :starting-modal-open? true))))
@@ -210,7 +215,9 @@
   :id :save-last-state
   :after (fn [{{:keys [db]} :effects :as context}]
            (cond-> context
-             db (assoc-in [:effects ::save-last-state] (select-keys db [:hand :starting-player?]))))))
+             db (assoc-in [:effects ::save-last-state] (-> db
+                                                           (select-keys [:hand :starting-player? :meld-groups])
+                                                           (update :meld-groups update-keys str)))))))
 
 (reg-fx
  ::save-last-state
@@ -226,9 +233,14 @@
  (fn [db]
    (-> (assoc db :meld-modal {:open? true
                               ;; TODO
-                              :groups {(random-uuid) {0 nil
-                                                      1 nil
-                                                      2 nil}}}))))
+                              :groups (if-let [meld-groups (grab db :meld-groups)]
+                                        (-> (->> meld-groups
+                                                 (map (fn [[id group]]
+                                                        [id (zipmap (range (count group))
+                                                                    group)]))
+                                                 (into {}))
+                                            (assoc (random-uuid) {})) ;; add an empty group onto the end
+                                        {(random-uuid) {}})}))))
 
 (reg-event-x
  :close-meld-modal
@@ -240,18 +252,12 @@
  (fn [db meld-group-id id tile-idx]
    (let [db' (-> db
                  (assoc-in [:meld-modal :groups meld-group-id id] tile-idx)
-                 (update :meld-modal dissoc :show-invalid?))
-         filled-tiles-in-group-count (->> (get-in db' [:meld-modal :groups meld-group-id])
-                                          (filter #(some? (val %)))
-                                          count)]
+                 (update :meld-modal dissoc :show-invalid?))]
      (cond-> db'
-       (>= filled-tiles-in-group-count 3) ;; group has 3+ tiles filled, add a new zone
-       (assoc-in [:meld-modal :groups meld-group-id filled-tiles-in-group-count] nil)
-       
-       (every? #(some some? (vals %)) (vals (get-in db' [:meld-modal :groups]))) ;; every group has at least 1 tile filled, create a new blank group
-       (assoc-in [:meld-modal :groups (random-uuid)] {0 nil
-                                                      1 nil
-                                                      2 nil})))))
+       (->> (get-in db' [:meld-modal :groups])
+            vals
+            (every? #(some some? (vals %)))) ;; every group has at least 1 tile filled, create a new blank group
+       (assoc-in [:meld-modal :groups (random-uuid)] {})))))
 
 (reg-event-x
  :meld-remove-from-group
@@ -262,72 +268,42 @@
          completely-empty-groups (->> (get-in db' [:meld-modal :groups])
                                       (filter (fn [[_ v]]
                                                 (every? #(nil? (val %)) v))))]
-     (cond-> (loop [db'' db']
-               (if (and (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                            last
-                            val
-                            (= nil))
-                        (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                            drop-last
-                            last
-                            val
-                            (= nil)))
-                 (recur (update-in db'' [:meld-modal :groups meld-group-id] dissoc (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                                                                                       last
-                                                                                       key)))
-                 db''))
-
+     (cond-> db'
        (> (count completely-empty-groups) 1) ;; 2 groups are completely empty, delete the lastmost one
        (update-in [:meld-modal :groups] dissoc (key (last completely-empty-groups)))))))
-
-(comment
-  (let [db @re-frame.db/app-db
-        meld-group-id (first (keys (get-in db [:meld-modal :groups])))
-        id 4
-        db' (-> db
-                (assoc-in [:meld-modal :groups meld-group-id id] nil)
-                (update :meld-modal dissoc :show-invalid?))]
-    (-> (loop [db'' db']
-          (if (and (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                       last
-                       val
-                       (= nil))
-                   (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                       drop-last
-                       last
-                       val
-                       (= nil)))
-            (recur (update-in db'' [:meld-modal :groups meld-group-id] dissoc (-> (get-in db'' [:meld-modal :groups meld-group-id])
-                                                                                  last
-                                                                                  key)))
-            db''))
-        (get-in [:meld-modal :groups meld-group-id]))))
-
-(reg-event-x
- :meld-create-group
- (fn [db]
-   (assoc-in db [:meld-modal :groups (random-uuid)] [])))
 
 (reg-event-x
  :save-meld
  (fn [db]
    (let [ignore-invalid? (grab db :meld-modal-show-invalid?)
-         db' (reduce (fn [db' idx]
-                       (assoc-in db' [:hand idx :melded?] (get-in db [:meld-modal :selection idx])))
-                     db
-                     (range (grab db :hand-size)))
-         invalid? (when-not ignore-invalid?
-                    (let [melded-tiles (->> (grab db' :hand)
-                                            vals
-                                            (filter :melded?))]
-                      (->> melded-tiles
-                           (filter #(not (joker? %)))
-                           (some (fn [melded-tile]
-                                   (< (->> melded-tiles
-                                           (filter #(or (= % melded-tile)
-                                                        (joker? %)))
-                                           count) 3))))))] 
-     (if invalid?
+         hand (grab db :hand)
+         groups (->> (grab db :meld-modal-groups)
+                      (filter (fn [[_ group]]
+                                ;; ignore empty groups
+                                (some some? (vals group))))
+                      (map (fn [[id group]]
+                             ;; map to tiles; ignore empty drop zones
+                             [id (->> group
+                                      vals
+                                      (filter some?))]))
+                      (into {}))
+         valid? (if ignore-invalid?
+                  true
+                  (let [groups' (->> groups
+                                     vals
+                                     (map (fn [group]
+                                            (->> group
+                                                 (map #(get hand %))))))]
+                    (every? (fn [group]
+                              (and (>= (count group) 3) ;; meld must be 3 tiles 
+                                   (->> group
+                                        (filter #(not (joker? %)))
+                                        set
+                                        count
+                                        (= 1)) ;; all tiles in meld must be the same (excluding jokers ofc)
+                                   ))
+                            groups')))]
+     (if-not valid?
        (assoc-in db [:meld-modal :show-invalid?] true)
-       {:db db'
+       {:db (assoc db :meld-groups groups)
         :dispatch [:close-meld-modal]}))))

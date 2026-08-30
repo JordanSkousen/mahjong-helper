@@ -13,7 +13,7 @@
 
 (defn- rank-one
   [hand pattern]
-  (let [arrangement (first (solver/find-arrangements pattern hand 1))
+  (let [arrangement (first (solver/find-arrangements pattern hand [] 1))
         ranking (count (remove nil? (:assignment arrangement)))]
     {:ranking ranking :arrangement arrangement}))
 

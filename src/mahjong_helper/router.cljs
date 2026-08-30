@@ -135,7 +135,6 @@
 (reg-fx
  :push-state
  (fn [route]
-   (js/console.log route)
    (apply push-state-end-segment route)))
 
 (reg-event-x

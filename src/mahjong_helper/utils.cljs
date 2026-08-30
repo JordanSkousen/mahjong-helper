@@ -43,17 +43,19 @@
                               vals
                               (filter seq)
                               seq)
-        hand' (->> last-state
+        last-state' (when use-last-state?'
+                      last-state)
+        hand' (->> last-state'
                    :hand
                    (map (fn [[key val]]
                           [(-> key name int) val]))
                    (into {}))]
     {:theme (keyword (or (js/window.localStorage.getItem "theme") "jordan"))
-     :hand (if (>= (count (keys (:hand last-state))) 13)
+     :hand (if (>= (count (keys (:hand last-state'))) 13)
              hand'
-             (zipmap (range (if (:starting-player? last-state) 14 13))
+             (zipmap (range (if (:starting-player? last-state') 14 13))
                      (repeat {})))
-     :starting-player? (:starting-player? last-state)
+     :starting-player? (:starting-player? last-state')
      :editing (or (->> hand' ;; select first non-complete tile
                        (sort-by first)
                        (filter (fn [[_ val]]
@@ -61,4 +63,5 @@
                        first
                        first)
                   0)
+     :meld-groups (update-keys (:meld-groups last-state') #(-> % str uuid))
      :starting-modal-open? (not use-last-state?')}))

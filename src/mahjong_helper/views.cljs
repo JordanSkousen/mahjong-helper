@@ -73,19 +73,22 @@
 (defn hand-tile
   "A completed tile in the hand; tap to edit it."
   [idx tile type]
-  (let [{:keys [value suit melded?]} tile
+  (let [{:keys [value suit]} tile
         type (or type :normal)
         normal? (= type :normal)
         charleston? (= type :charleston)
+        melded? (= type :melded)
         needs-suit? (not (suitless? value))
         editing? (and normal?
                       (= idx @(subscribe [:editing-idx])))
         charleston-selected? (and charleston?
-                                  (get @(subscribe [:charleston-selection]) idx))
-
-        soap? (and (dragon? tile) (= suit "D"))]
-    [:button.tile.hand-tile {:on-click #(if charleston?
+                                  (get @(subscribe [:charleston-selection]) idx))]
+    [:button.tile.hand-tile {:on-click #(cond 
+                                          charleston?
                                           (dispatch [:toggle-charleston-select idx])
+                                          melded?
+                                          (dispatch [:open-meld-modal])
+                                          :else
                                           (do (dispatch [:edit-tile idx])
                                               (js/window.scrollTo #js{:top 0 :behavior "smooth"})))
                              :class [(when (and (not editing?)
@@ -103,8 +106,34 @@
                              :style (hand-tile-style idx tile type)}
      [hand-tile-inner idx tile type]]))
 
+(defn melded-view []
+  (when-let [meld-groups @(subscribe [:meld-groups])] 
+    (let [hand @(subscribe [:hand])]
+      [:div {:style {:margin-bottom 10}}
+       [:div {:style {:display "flex"
+                      :justify-content "space-between"
+                      :align-items "baseline"
+                      :margin-bottom "6px"}}
+        [:span "Melded Tiles"]]
+       [:div {:style {:display "flex"
+                      :flex-wrap "wrap"
+                      :gap "6px"
+                      :min-height "58px"}}
+        (doall
+         (for [[id meld-group] meld-groups]
+           [:div {:key id 
+                  :style {:display "flex"
+                          :flex-wrap "wrap"
+                          :gap "3px"
+                          :margin-right 10}}
+            (doall
+             (for [idx meld-group]
+               (let [tile (get hand idx)]
+                 ^{:key idx} [hand-tile idx tile :melded])))]))]])))
+
 (defn hand-view []
-  (let [hand @(subscribe [:hand])]
+  (let [hand @(subscribe [:hand])
+        melded-tiles @(subscribe [:melded-tile-idxs])]
     [:div#hand-view
      [:div {:style {:display "flex"
                     :justify-content "space-between"
@@ -119,8 +148,9 @@
                     :min-height "58px"}}
       (doall
        (for [idx (range @(subscribe [:hand-size]))]
-         (let [tile (get hand idx)]
-           ^{:key idx} [hand-tile idx tile])))]]))
+         (when-not (some #{idx} melded-tiles)
+           (let [tile (get hand idx)]
+             ^{:key idx} [hand-tile idx tile]))))]]))
 
 (defn keyboard []
   (let [editing @(subscribe [:editing])
@@ -295,14 +325,16 @@
   (let [value (subs tile-str 0 1)
         suit (let [s (subs tile-str 1 2)] (when (not= s ".") s))
         soap? (and (dragon? value) (= suit "D"))
+        melded? (some #{tile-str} (apply concat @(subscribe [:meld-groups-as-strs])))
         {:keys [icon]} (->> tile-keys
                             (filter #(and (= (:key %) value)
                                           (not (:suit? %))))
                             first)]
-    [:div.tile.hand-tile {:class (when muted? "tile-muted")
-                          :style {:background (when-not soap?
-                                                (get-in suits [suit :color]))
-                                  :color (if (and suit (not muted?)) "white" "black")}}
+    [:div.tile.hand-tile.tile-face {:class [(when muted? "tile-muted")
+                                            (when melded? "melded-tile")]
+                                    :style {:background (when-not soap?
+                                                          (get-in suits [suit :color]))
+                                            :color (if (and suit (not muted?)) "white" "black")}}
      (if soap?
        [:img {:src @(subscribe [:svg-url 0])
               :height "36px"}]
@@ -345,8 +377,9 @@
 (defn result-modal []
   (let [pattern @(subscribe [:result-modal-open-pattern])
         hand-as-strs @(subscribe [:hand-as-strs])
+        melds @(subscribe [:meld-groups-as-strs])
         {:keys [id category]} (get patterns pattern)
-        arrangements (when pattern (find-arrangements pattern hand-as-strs))]
+        arrangements (when pattern (find-arrangements pattern hand-as-strs melds))]
     [Modal {:open? (some? pattern)
             :title [:div {:style {:font-weight :normal}}
                     [:div.result-modal-top
@@ -389,21 +422,23 @@
 (defonce ^:private rankings-computed-for (atom nil))
 
 (defn- ensure-rankings!
-  [hand-as-strs]
-  (when (not= @rankings-computed-for hand-as-strs)
-    (reset! rankings-computed-for hand-as-strs)
-    (rank-patterns-async hand-as-strs
-                         (fn [results]
-                           ;; drop the result if a newer hand has since superseded it
-                           (when (= @rankings-computed-for hand-as-strs)
-                             (reset! pattern-rankings {:hand hand-as-strs :rankings results}))))))
+  [hand-as-strs melds]
+  (let [computed-for [hand-as-strs melds]]
+    (when (not= @rankings-computed-for computed-for)
+      (reset! rankings-computed-for computed-for)
+      (rank-patterns-async hand-as-strs melds
+                           (fn [results]
+                             ;; drop the result if a newer hand/melds has since superseded it
+                             (when (= @rankings-computed-for computed-for)
+                               (reset! pattern-rankings {:hand hand-as-strs :rankings results})))))))
 
 (defn results-view []
   (let [hand-as-strs @(subscribe [:hand-as-strs])
+        melds @(subscribe [:meld-groups-as-strs])
         preview-mode? @(subscribe [:preview-mode?])
         traditional-theme? @(subscribe [:traditional-theme?])]
     (when @(subscribe [:hand-complete?])
-      (ensure-rankings! hand-as-strs)
+      (ensure-rankings! hand-as-strs melds)
       (let [{:keys [hand rankings]} @pattern-rankings
             computing? (not= hand hand-as-strs)]
         [:<>
@@ -430,6 +465,11 @@
                                :pattern pattern
                                :ranking ranking
                                :arrangement arrangement}))
+                       ;; a ranking of 0 means impossible (e.g. a meld
+                       ;; that doesn't fit anywhere in this pattern) —
+                       ;; not merely unmatched-so-far, so it's not worth
+                       ;; showing at all
+                       (remove #(zero? (:ranking %)))
                        (sort-by :id)
                        (sort-by :ranking >))
                   :let [ranking-pct (/ ranking 14) ;; this should always be 14 since you need 14 tiles to get mahjong, duh
@@ -530,17 +570,19 @@
                                     (mapcat vals)
                                     (apply hash-set))]
     [Modal {:open? @(subscribe [:meld-modal-open?])
-            :title "Choose all tiles you've melded"
+            :title "Drag and drop tiles you've melded"
             :closable? true
             :on-close #(dispatch [:close-meld-modal])}
      [:> DragDropProvider {:on-drag-end (fn [evt]
                                           (when-not (.-canceled evt) 
-                                            (if-let [target (.. evt -operation -target)]
-                                              (let [tile-idx (int (.. evt -operation -source -id))
-                                                    [group-id id] (string/split (.-id target) #"/")]
-                                                (dispatch [:meld-add-to-group (uuid group-id) (int id) tile-idx]))
-                                              (let [[source-group-id source-id] (string/split (.. evt -operation -source -id) #"/")]
-                                                (dispatch [:meld-remove-from-group (uuid source-group-id) (int source-id)])))))}
+                                            (let [source-id (.. evt -operation -source -id)]
+                                              (if-let [target (.. evt -operation -target)]
+                                                (when-not (string? source-id) ;; ensure we're not dragging a group member onto a drop zone
+                                                  (let [tile-idx (int source-id)
+                                                        [group-id id] (string/split (.-id target) #"/")]
+                                                    (dispatch [:meld-add-to-group (uuid group-id) (int id) tile-idx])))
+                                                (let [[source-group-id source-idx] (string/split source-id #"/")]
+                                                  (dispatch [:meld-remove-from-group (uuid source-group-id) (int source-idx)]))))))}
       [:div {:style {:display "flex"
                      :flex-wrap "wrap"
                      :gap "6px"
@@ -562,16 +604,17 @@
           [:div.meld-group
            (doall
             (for [[id tile-idx] zones]
-              (if tile-idx
-                [:f> draggable-hand-tile {:idx tile-idx
-                                          :tile (get hand tile-idx)
-                                          :group-id group-id
-                                          :id id}]
-                [:f> meld-drop-zone group-id id])))]))]
+              (-> (if tile-idx
+                    [:f> draggable-hand-tile {:idx tile-idx
+                                              :tile (get hand tile-idx)
+                                              :group-id group-id
+                                              :id id}]
+                    [:f> meld-drop-zone group-id id])
+                  (with-meta {:key id}))))]))]
       (when show-invalid?
         [:div {:style {:margin "10px 0"
                        :color :red}}
-         "The tiles you've melded are not valid according to NMJL rules! (Press 'Save' again to ignore.)"])
+         "The tiles you've melded are not valid according to official NMJL rules! (Press 'Save' again to ignore.)"])
       [:div.buttons-row
        [:button {:style {:background "red"
                          :color "white"
@@ -709,8 +752,8 @@
                       :margin "0 auto"
                       :padding "12px 12px 36px"}}
         [starting-modal]
-        [charleston-modal]
-        #_[meld-modal]
+        [charleston-modal] 
+        [meld-modal]
         [reset-modal]
         [settings-modal]
         [result-modal]
@@ -725,6 +768,7 @@
            [:button.clear-btn {:on-click #(dispatch [:open-reset-modal])}
             "Reset"]]]]
         [:div {:style {:height "calc(1.5em + 20px)"}}]
+        [melded-view]
         [hand-view]
         (when @(subscribe [:hand-complete?])
           [:<>

@@ -53,17 +53,20 @@
 (defonce ^:private request-id (atom 0))
 
 (defn rank-patterns-async
-  "Ranks every pattern in mahjong-helper.const/patterns against `hand`,
-   splitting the work across num-workers Web Workers so the main thread
-   (and the UI) never blocks on it. Calls on-result once with the merged
-   {pattern {:ranking int :arrangement {:context .. :assignment ..}}} map
-   — the arrangement is the same shape mahjong-helper.solver/find-arrangements
-   returns, precomputed here so Preview Mode doesn't have to redo this
-   work synchronously for every pattern on the main thread.
+  "Ranks every pattern in mahjong-helper.const/patterns against `hand`
+   plus any `melds` (each a vec of tile strings, e.g. [\"2B\" \"2B\"
+   \"2B\"] — see mahjong-helper.solver/rank-pattern for what a meld
+   means to the ranking), splitting the work across num-workers Web
+   Workers so the main thread (and the UI) never blocks on it. Calls
+   on-result once with the merged {pattern {:ranking int :arrangement
+   {:context .. :assignment ..}}} map — the arrangement is the same
+   shape mahjong-helper.solver/find-arrangements returns, precomputed
+   here so Preview Mode doesn't have to redo this work synchronously for
+   every pattern on the main thread.
 
    If a newer call comes in before this one's workers all report back,
    its result is dropped instead of clobbering the fresher one."
-  [hand on-result]
+  [hand melds on-result]
   (let [id (swap! request-id inc)
         pattern-keys (vec (keys patterns))
         chunk-size (js/Math.ceil (/ (count pattern-keys) num-workers))
@@ -85,4 +88,4 @@
                               (= id @request-id))
                       (on-result @received)))))]
         (.addEventListener worker "message" handler)
-        (.postMessage worker (clj->js {:id id :hand hand :patterns (vec chunk)}))))))
+        (.postMessage worker (clj->js {:id id :hand hand :melds melds :patterns (vec chunk)}))))))

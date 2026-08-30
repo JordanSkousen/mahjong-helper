@@ -134,3 +134,69 @@
     ;; correctly withheld here
     (let [context {"a" "B" "u" "8"}]
       (is (nil? (solver/resolve-group-str context "2uc"))))))
+
+;; "21a32a23a34a45a" -> 11(a) 222(a) 33(a) 444(a) 5555(a): pairs/triples/
+;; quads of 1,2,3,4,5, all one suit. Matches the melding feature's own
+;; worked example: melding "32a" gives three 2s, melding "45a" gives
+;; four 5s.
+
+(deftest melded-groups-count-toward-ranking
+  (testing "a melded group is a fixed, already-exposed set — it counts
+            fully toward the ranking without needing any of its tiles
+            to also be sitting in hand"
+    (let [melds [["2B" "2B" "2B"] ["5B" "5B" "5B" "5B"]]
+          hand ["1B" "1B" "3B" "3B" "4B" "4B" "4B"]
+          pattern "21a32a23a34a45a"]
+      (is (= 14 (solver/rank-pattern pattern hand melds))))))
+
+(deftest meld-forces-suit-for-the-rest-of-the-pattern
+  (testing "once a meld pins suit \"a\" to Bamb, hand tiles of a
+            different suit can no longer fill \"a\"-lettered slots —
+            same rule as two ordinary tiles disagreeing on a suit letter"
+    (let [melds [["2B" "2B" "2B"]]
+          hand ["1C" "1C" "3C" "3C" "4C" "4C" "4C" "5C" "5C" "5C" "5C"]
+          pattern "21a32a23a34a45a"]
+      ;; only the meld's own 3 tiles count; every Crak tile is rejected
+      ;; since "a" is locked to Bamb
+      (is (= 3 (solver/rank-pattern pattern hand melds))))))
+
+(deftest meld-that-cannot-fit-makes-pattern-impossible
+  (testing "a meld with no matching-mult group anywhere in the pattern
+            makes it permanently unreachable — ranking is 0 regardless
+            of how well the rest of the hand otherwise fits"
+    (let [melds [["N." "N." "N." "N."]] ;; no wind group exists in this pattern
+          hand ["1B" "1B" "2B" "2B" "2B" "3B" "3B" "4B" "4B" "4B" "5B" "5B" "5B" "5B"]
+          pattern "21a32a23a34a45a"]
+      (is (= 0 (solver/rank-pattern pattern hand melds))))))
+
+(deftest meld-mult-must-match-exactly
+  (testing "a meld's tile count must exactly match a group's mult — a
+            triple can't partially fill a quad or overfill a pair"
+    (let [melds [["2B" "2B" "2B"]]
+          ;; only a mult-3 group ('32a', three 2s) exists for value 2;
+          ;; there's no mult-2 or mult-4 group of 2s to (mis)match
+          pattern "21a32a23a34a45a"]
+      (is (= 3 (solver/rank-pattern pattern [] melds))))))
+
+(deftest two-melds-can-share-a-suit-letter-consistently
+  (testing "two melds assigned to different groups of the same pattern
+            still have to agree on the suit letter they share"
+    (let [melds [["2B" "2B" "2B"] ["5B" "5B" "5B" "5B"]]
+          pattern "21a32a23a34a45a"]
+      (is (= 7 (solver/rank-pattern pattern [] melds))))))
+
+(deftest find-arrangements-respects-melds
+  (testing "find-arrangements folds melds into every returned
+            arrangement's assignment, occupying exactly the group they
+            were matched to"
+    (let [melds [["2B" "2B" "2B"] ["5B" "5B" "5B" "5B"]]
+          hand ["1B" "1B" "3B" "3B" "4B" "4B" "4B"]
+          pattern "21a32a23a34a45a"
+          arrangements (solver/find-arrangements pattern hand melds)]
+      (is (seq arrangements))
+      (doseq [{:keys [assignment]} arrangements]
+        (is (= 14 (count (remove nil? assignment))))
+        (is (every? #(= "2B" %) (subvec assignment 2 5))
+            (str "expected the meld's 2B triple at indices 2-4, got: " assignment))
+        (is (every? #(= "5B" %) (subvec assignment 10 14))
+            (str "expected the meld's 5B quad at indices 10-14, got: " assignment))))))
