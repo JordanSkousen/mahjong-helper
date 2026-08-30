@@ -6,7 +6,7 @@
 
 I'm including this disclosure for anyone viewing this project as part of my portfolio. I believe it's important to distinguish what is my code and what is generative AI's. 
 
-A large portion of this code is my own, including all of the UI, SCSS, and re-frame subs/handlers. Generative AI helped with the solver algorithm and the arrangement calculation.
+A large portion of this code is my own, including all of the UI, SCSS, re-frame subs/handlers and everything on the solitaire page. Generative AI helped with the solver algorithm and the arrangement calculation.
 
 ## Thanks
 
