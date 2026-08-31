@@ -1,4 +1,4 @@
-(ns mahjong-helper.views
+(ns mahjong-helper.helper.main
   (:require [clojure.string :as string]
             [mahjong-helper.components.menu-btn :refer [Menu-Btn]]
             [mahjong-helper.const :refer [patterns]]
